@@ -7,6 +7,7 @@ import DungeonsScreen from './components/DungeonsScreen.jsx';
 import CollectionScreen from './components/CollectionScreen.jsx';
 import SettingsScreen from './components/SettingsScreen.jsx';
 import Notifications from './components/Notifications.jsx';
+import headerLogo from './assets/header-logo.svg';
 
 const SCREENS = [
   { id: 'status', label: 'СТАТУС', component: StatusWindow },
@@ -33,7 +34,9 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1 className="app-logo glitch" data-text="「ARISE」">「ARISE」</h1>
+        <h1 className="app-logo">
+          <img src={headerLogo} alt="「ARISE」" draggable="false" />
+        </h1>
         <span className={`sync-badge sync-${syncStatus}`}>{SYNC_LABELS[syncStatus]}</span>
       </header>
       <nav className="app-nav">
