@@ -48,7 +48,8 @@ body {
 .app {
   max-width: 920px;
   margin: 0 auto;
-  padding: 30px 22px 130px; /* воздух (§8.1) */
+  /* сверху — запас под статус-бар/чёлку iPhone в режиме «с экрана Домой» */
+  padding: calc(30px + env(safe-area-inset-top, 0px)) 22px 130px;
 }
 
 /* ---------- шапка и навигация ---------- */
@@ -817,7 +818,9 @@ input[type='checkbox'] { accent-color: var(--accent-2); width: 16px; height: 16p
 /* ---------- адаптив: телефон = приложение ---------- */
 
 @media (max-width: 640px) {
-  .app { padding: 16px 14px calc(86px + env(safe-area-inset-bottom)); }
+  .app {
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(86px + env(safe-area-inset-bottom, 0px));
+  }
 
   .app-header { margin-bottom: 14px; }
   .app-logo { font-size: 20px; }
