@@ -23,3 +23,21 @@ export function daysBetween(dateKeyA, dateKeyB) {
 export function monthKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+// 90 → «1.5 ч», 45 → «45 мин»
+export function formatMinutes(min) {
+  if (min >= 60) {
+    const h = min / 60;
+    return `${Number.isInteger(h) ? h : h.toFixed(1)} ч`;
+  }
+  return `${min} мин`;
+}
+
+// «12.07» + сколько осталось; отрицательное = просрочено
+export function deadlineInfo(deadline) {
+  if (!deadline) return null;
+  const today = todayKey();
+  const left = daysBetween(today, deadline);
+  const [, m, d] = deadline.split('-');
+  return { label: `${d}.${m}`, left };
+}

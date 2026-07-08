@@ -12,9 +12,17 @@ function headers(token) {
   };
 }
 
-// Unicode-безопасный base64
+// Unicode-безопасный base64. Кодируем кусками: String.fromCharCode(...arr)
+// на большом data.json (карты с base64-артами) переполняет стек вызовов,
+// особенно в Safari на iOS.
 function encode(str) {
-  return btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+  const bytes = new TextEncoder().encode(str);
+  const CHUNK = 0x8000;
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
 }
 
 function decode(b64) {

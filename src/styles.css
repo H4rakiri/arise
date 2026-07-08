@@ -212,6 +212,33 @@ body {
 .grow { flex: 1; min-width: 160px; }
 .xp-input { width: 84px; }
 
+/* ручной ввод времени: число + мин/ч */
+.time-input { display: inline-flex; align-items: center; gap: 6px; }
+.time-value { width: 76px; }
+.time-unit { width: auto; }
+
+/* дедлайн */
+.deadline-field { display: inline-flex; align-items: center; gap: 8px; }
+.deadline-field .input { color-scheme: dark; }
+.deadline-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+.deadline-badge.soon {
+  color: var(--gold);
+  border-color: rgba(232, 199, 106, 0.4);
+}
+.deadline-badge.overdue {
+  color: var(--danger);
+  border-color: rgba(255, 91, 126, 0.45);
+  text-shadow: 0 0 8px rgba(255, 91, 126, 0.4);
+}
+
 .xp-preview {
   font-family: var(--mono);
   font-size: 13px;

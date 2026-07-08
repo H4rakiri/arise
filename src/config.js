@@ -9,12 +9,15 @@ export const CONFIG = {
     hard:    { label: 'Сложно',     mult: 2.5 },
     epic:    { label: 'Эпик',       mult: 4.0 },
   },
-  TIME: {
-    short:  { label: '~5 мин',      mult: 1.0 },
-    medium: { label: '~30 мин',     mult: 1.5 },
-    long:   { label: '~пара часов', mult: 2.5 },
-    day:    { label: 'день+',       mult: 4.0 },
-  },
+  // Время указывается вручную в минутах; множитель — по диапазонам из §5.1
+  TIME_BRACKETS: [
+    { maxMinutes: 10, mult: 1.0 },       // ~5 мин
+    { maxMinutes: 45, mult: 1.5 },       // ~30 мин
+    { maxMinutes: 240, mult: 2.5 },      // ~пара часов
+    { maxMinutes: Infinity, mult: 4.0 }, // день+
+  ],
+  // Старые категории времени (задачи, созданные до перехода на минуты)
+  LEGACY_TIME_MINUTES: { short: 5, medium: 30, long: 120, day: 480 },
 
   // §5.2 — кривая уровней: xp_to_next(L) = round(LEVEL_BASE × L^LEVEL_EXP)
   LEVEL_BASE: 100,

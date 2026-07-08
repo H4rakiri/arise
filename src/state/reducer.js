@@ -110,13 +110,14 @@ export function reducer(state, action) {
 
     case 'ADD_TASK': {
       data = clone(data);
-      const { title, stat, difficulty, time, source } = action;
+      const { title, stat, difficulty, time, deadline, source } = action;
       data.tasks.unshift({
         id: uuid(),
         title,
         stat,
         difficulty,
-        time,
+        time, // минуты
+        deadline: deadline || null, // YYYY-MM-DD
         xp: taskXP(difficulty, time),
         status: 'todo',
         createdAt: new Date().toISOString(),
@@ -136,6 +137,7 @@ export function reducer(state, action) {
           stat: t.stat,
           difficulty: t.difficulty,
           time: t.time,
+          deadline: t.deadline || null,
           xp: taskXP(t.difficulty, t.time),
           status: 'todo',
           createdAt: new Date().toISOString(),

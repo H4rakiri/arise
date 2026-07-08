@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../state/AppContext.jsx';
 import { CONFIG, STATS } from '../config.js';
 import { taskXP } from '../lib/xp.js';
+import TimeInput from './TimeInput.jsx';
 import { parsePlanHeuristic } from '../lib/heuristic.js';
 import { isWebGPUAvailable, parsePlanLLM } from '../llm/planner.js';
 
@@ -88,11 +89,7 @@ export default function PlanInput() {
                   <option key={k} value={k}>{v.label}</option>
                 ))}
               </select>
-              <select className="select" value={t.time} onChange={(e) => patchDraft(i, 'time', e.target.value)}>
-                {Object.entries(CONFIG.TIME).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
-              </select>
+              <TimeInput minutes={t.time} onChange={(m) => patchDraft(i, 'time', m)} />
               <span className="xp-preview">+{taskXP(t.difficulty, t.time)}</span>
               <button className="icon-btn" title="Убрать" onClick={() => setDraft(draft.filter((_, idx) => idx !== i))}>
                 ✕

@@ -9,12 +9,19 @@ const STAT_PATTERNS = {
   work:  /работ|митинг|созвон|таск|тикет|релиз|код-?ревью|деплой|отчёт|отчет/i,
 };
 
-const TIME_PATTERNS = [
-  { re: /день|весь день|целый день/i, time: 'day' },
-  { re: /час[а-я]*|2\s*ч|пару часов|полтора/i, time: 'long' },
-  { re: /30\s*мин|полчас/i, time: 'medium' },
-  { re: /5\s*мин|10\s*мин|быстро|мелоч/i, time: 'short' },
-];
+// Оценка времени в минутах из текста строки
+function guessMinutes(title) {
+  let m = title.match(/(\d+([.,]\d+)?)\s*час|(\d+([.,]\d+)?)\s*ч\b/i);
+  if (m) return Math.round(parseFloat((m[1] || m[3]).replace(',', '.')) * 60);
+  m = title.match(/(\d+)\s*мин/i);
+  if (m) return parseInt(m[1], 10);
+  if (/весь день|целый день|день\b/i.test(title)) return 480;
+  if (/пару часов|полтора/i.test(title)) return 120;
+  if (/час/i.test(title)) return 60;
+  if (/полчас/i.test(title)) return 30;
+  if (/быстро|мелоч|5\s*мин/i.test(title)) return 10;
+  return 30;
+}
 
 const DIFF_PATTERNS = [
   { re: /эпик|огромн|важнейш|защит/i, difficulty: 'epic' },
@@ -36,8 +43,7 @@ export function parsePlanHeuristic(text) {
     .map((line) => line.replace(/^\s*(?:[-*—]|\d+[.)\]])\s*/, '').trim())
     .filter((line) => line.length > 1)
     .map((title) => {
-      const time = TIME_PATTERNS.find((p) => p.re.test(title))?.time || 'medium';
       const difficulty = DIFF_PATTERNS.find((p) => p.re.test(title))?.difficulty || 'normal';
-      return { title, stat: guessStat(title), difficulty, time };
+      return { title, stat: guessStat(title), difficulty, time: guessMinutes(title) };
     });
 }

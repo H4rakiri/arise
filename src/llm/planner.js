@@ -4,7 +4,7 @@
 // few-shot примерами + робастным извлечением JSON из ответа.
 // XP сайт считает сам по §5.1 — модель его не выдумывает.
 
-import { STAT_KEYS } from '../config.js';
+import { CONFIG, STAT_KEYS } from '../config.js';
 
 let enginePromise = null;
 let loadedModel = null;
@@ -103,12 +103,14 @@ export async function parsePlanLLM(text, model, onProgress) {
   const tasks = Array.isArray(parsed) ? parsed : parsed.tasks;
   if (!Array.isArray(tasks)) throw new Error('LLM вернула не массив задач');
   // Валидация схемы — недоверенный вывод модели приводим к допустимым значениям
+  // Модель отдаёт категорию времени (стабильнее для few-shot),
+  // сайт конвертирует её в минуты — дальше всё в минутах.
   return tasks
     .filter((t) => t && typeof t.title === 'string' && t.title.trim())
     .map((t) => ({
       title: t.title.trim(),
       stat: STAT_KEYS.includes(t.stat) ? t.stat : 'work',
       difficulty: ['trivial', 'normal', 'hard', 'epic'].includes(t.difficulty) ? t.difficulty : 'normal',
-      time: ['short', 'medium', 'long', 'day'].includes(t.time) ? t.time : 'medium',
+      time: CONFIG.LEGACY_TIME_MINUTES[t.time] ?? 30,
     }));
 }

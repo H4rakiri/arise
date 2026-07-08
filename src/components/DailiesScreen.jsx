@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Panel from './Panel.jsx';
+import TimeInput from './TimeInput.jsx';
 import { useApp } from '../state/AppContext.jsx';
 import { CONFIG, STATS } from '../config.js';
 import { taskXP } from '../lib/xp.js';
@@ -13,7 +14,7 @@ export default function DailiesScreen() {
   const [title, setTitle] = useState('');
   const [stat, setStat] = useState('jp');
   const [difficulty, setDifficulty] = useState('normal');
-  const [time, setTime] = useState('medium');
+  const [minutes, setMinutes] = useState(30);
 
   const doneCount = dailies.filter((d) => d.history[today]).length;
 
@@ -21,7 +22,7 @@ export default function DailiesScreen() {
     e.preventDefault();
     const t = title.trim();
     if (!t) return;
-    dispatch({ type: 'ADD_DAILY', title: t, stat, difficulty, time });
+    dispatch({ type: 'ADD_DAILY', title: t, stat, difficulty, time: minutes });
     setTitle('');
   }
 
@@ -98,12 +99,8 @@ export default function DailiesScreen() {
                 <option key={k} value={k}>{v.label}</option>
               ))}
             </select>
-            <select className="select" value={time} onChange={(e) => setTime(e.target.value)}>
-              {Object.entries(CONFIG.TIME).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
-              ))}
-            </select>
-            <span className="xp-preview">+{taskXP(difficulty, time)} XP/день</span>
+            <TimeInput minutes={minutes} onChange={setMinutes} />
+            <span className="xp-preview">+{taskXP(difficulty, minutes)} XP/день</span>
             <button className="btn primary" type="submit" disabled={!title.trim()}>
               Добавить
             </button>

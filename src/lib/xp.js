@@ -1,10 +1,18 @@
 import { CONFIG } from '../config.js';
 
-// §5.1: XP = BASE × mult_difficulty × mult_time
+export function timeMultForMinutes(minutes) {
+  for (const { maxMinutes, mult } of CONFIG.TIME_BRACKETS) {
+    if (minutes <= maxMinutes) return mult;
+  }
+  return 1;
+}
+
+// §5.1: XP = BASE × mult_difficulty × mult_time.
+// time — минуты (число) либо старая категория ('short'|'medium'|…).
 export function taskXP(difficulty, time) {
   const d = CONFIG.DIFFICULTY[difficulty]?.mult ?? 1;
-  const t = CONFIG.TIME[time]?.mult ?? 1;
-  return Math.round(CONFIG.BASE_XP * d * t);
+  const minutes = typeof time === 'number' ? time : CONFIG.LEGACY_TIME_MINUTES[time] ?? 30;
+  return Math.round(CONFIG.BASE_XP * d * timeMultForMinutes(minutes));
 }
 
 // §5.2: xp_to_next(L) = round(100 × L^1.5)
