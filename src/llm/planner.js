@@ -8,6 +8,20 @@ import { CONFIG, STAT_KEYS } from '../config.js';
 
 let enginePromise = null;
 let loadedModel = null;
+let workerRef = null;
+
+// Аварийный стоп: убить воркер нейронки (зависшая загрузка/генерация)
+// и сбросить движок — следующий запуск начнёт с чистого листа.
+export function cancelLLM() {
+  try {
+    workerRef?.terminate();
+  } catch {
+    /* воркер уже мёртв */
+  }
+  workerRef = null;
+  enginePromise = null;
+  loadedModel = null;
+}
 
 const SYSTEM_PROMPT = `Ты — модуль Системы ARISE. Разбей план дня пользователя на отдельные задачи.
 Ответь ТОЛЬКО валидным JSON-объектом вида {"tasks":[{"title":"...","stat":"...","difficulty":"...","time":"..."}]} — без пояснений, без markdown.
@@ -40,6 +54,7 @@ async function getEngine(model, onProgress) {
   enginePromise = (async () => {
     const { CreateWebWorkerMLCEngine } = await import('@mlc-ai/web-llm');
     const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+    workerRef = worker;
     return CreateWebWorkerMLCEngine(worker, model, {
       initProgressCallback: (p) => onProgress?.(p.text || ''),
     });

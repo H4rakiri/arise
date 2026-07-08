@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApp } from '../state/AppContext.jsx';
 import { CONFIG, STATS } from '../config.js';
 import { taskXP } from '../lib/xp.js';
 import TimeInput from './TimeInput.jsx';
 import { parsePlanHeuristic } from '../lib/heuristic.js';
-import { isWebGPUAvailable, parsePlanLLM } from '../llm/planner.js';
+import { isWebGPUAvailable, parsePlanLLM, cancelLLM } from '../llm/planner.js';
 
 // «План дня» (Фаза 5): свободный текст → черновик задач → просмотр/правка → принять.
-// LLM — надстройка: выключена или недоступна → эвристика, всё работает.
+// Эвристика и нейронка — отдельные кнопки: быстрый разбор всегда под рукой,
+// LLM запускается только явно и её можно прервать «Отменой».
 export default function PlanInput() {
   const { state, dispatch } = useApp();
   const { llmEnabled, llmModel } = state.data.settings;
@@ -16,27 +17,45 @@ export default function PlanInput() {
   const [source, setSource] = useState('heuristic');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
+  // Счётчик запусков: результат убитого/устаревшего воркера игнорируется
+  const runRef = useRef(0);
 
-  async function parse() {
+  function parseFast() {
     const input = text.trim();
     if (!input) return;
-    if (llmEnabled && isWebGPUAvailable()) {
-      setBusy(true);
-      setProgress('Загрузка модели…');
-      try {
-        const tasks = await parsePlanLLM(input, llmModel, setProgress);
-        setDraft(tasks);
-        setSource('llm');
-        return;
-      } catch (e) {
-        dispatch({ type: 'PUSH_EVENT', event: { kind: 'sync-error', message: `LLM: ${e.message}. Использую эвристику.` } });
-      } finally {
+    setDraft(parsePlanHeuristic(input));
+    setSource('heuristic');
+  }
+
+  async function parseLLM() {
+    const input = text.trim();
+    if (!input || busy) return;
+    const runId = ++runRef.current;
+    setBusy(true);
+    setProgress('Загрузка модели…');
+    try {
+      const tasks = await parsePlanLLM(input, llmModel, (p) => {
+        if (runId === runRef.current) setProgress(p);
+      });
+      if (runId !== runRef.current) return; // отменили — результат не нужен
+      setDraft(tasks);
+      setSource('llm');
+    } catch (e) {
+      if (runId !== runRef.current) return;
+      dispatch({ type: 'PUSH_EVENT', event: { kind: 'sync-error', message: `LLM: ${e.message}. Попробуй эвристику.` } });
+    } finally {
+      if (runId === runRef.current) {
         setBusy(false);
         setProgress('');
       }
     }
-    setDraft(parsePlanHeuristic(input));
-    setSource('heuristic');
+  }
+
+  function cancel() {
+    runRef.current += 1; // все висящие await теперь устарели
+    cancelLLM();
+    setBusy(false);
+    setProgress('');
   }
 
   function patchDraft(i, field, value) {
@@ -61,10 +80,23 @@ export default function PlanInput() {
         onChange={(e) => setText(e.target.value)}
       />
       <div className="plan-actions">
-        <button className="btn" onClick={parse} disabled={busy || !text.trim()}>
-          {busy ? 'РАЗБОР…' : llmEnabled && isWebGPUAvailable() ? '⚡ Разобрать (LLM)' : 'Разобрать'}
-        </button>
-        {progress && <span className="dim plan-progress">{progress}</span>}
+        {busy ? (
+          <>
+            <button className="btn danger" onClick={cancel}>Отмена</button>
+            <span className="dim plan-progress">{progress || 'Система думает…'}</span>
+          </>
+        ) : (
+          <>
+            <button className="btn" onClick={parseFast} disabled={!text.trim()}>
+              Разобрать
+            </button>
+            {llmEnabled && isWebGPUAvailable() && (
+              <button className="btn" onClick={parseLLM} disabled={!text.trim()}>
+                ⚡ Нейронка
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {draft && (
