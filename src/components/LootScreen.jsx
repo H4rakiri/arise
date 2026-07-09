@@ -3,11 +3,63 @@ import Panel from './Panel.jsx';
 import { useApp } from '../state/AppContext.jsx';
 import { ITEM_TYPES, RARITY_LABELS, STATS } from '../config.js';
 import { localLore } from '../lib/loot.js';
+import { SLOT_ICONS, Silhouette } from './SlotIcons.jsx';
 import { isWebGPUAvailable, generateItemLore, cancelLLM } from '../llm/planner.js';
 
 // Инвентарь: предметы падают с задач неопознанными; опознание генерирует
-// лор (нейронкой, если включена, иначе локальными таблицами). Экипировка —
-// один предмет на слот (оружие/броня/аксессуар), бонусы видны в СТАТУС.
+// лор (нейронкой, если включена, иначе локальными таблицами).
+// Экипировка — окно EQUIPMENT: силуэт охотника и 7 слотов вокруг.
+
+function Slot({ type, item, onUnequip }) {
+  const meta = ITEM_TYPES[type];
+  return (
+    <div className={`equip-slot ${item ? `rarity-${item.rarity}` : 'empty'}`}>
+      <div className="equip-slot-box">{SLOT_ICONS[type]}</div>
+      <div className="equip-slot-info">
+        <span className="equip-slot-type">{meta.label}</span>
+        {item ? (
+          <>
+            <span className="equip-item-name">{item.name}</span>
+            <span className="equip-item-bonus">{STATS[item.bonus.stat]?.label} +{item.bonus.value}</span>
+            <button className="link-btn equip-off" onClick={() => onUnequip(item.id)}>снять</button>
+          </>
+        ) : (
+          <span className="dim small">— пусто —</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EquipmentWindow() {
+  const { state, dispatch } = useApp();
+  const items = state.data.inventory?.items ?? [];
+  const byType = (t) => items.find((i) => i.equipped && i.type === t);
+  const unequip = (id) => dispatch({ type: 'UNEQUIP_ITEM', id });
+
+  return (
+    <Panel title="EQUIPMENT" className="equip-panel">
+      <div className="equip-window">
+        <div className="equip-col">
+          {['weapon', 'armor', 'gloves'].map((t) => (
+            <Slot key={t} type={t} item={byType(t)} onUnequip={unequip} />
+          ))}
+        </div>
+        <div className="equip-figure">
+          <Silhouette />
+        </div>
+        <div className="equip-col right">
+          {['helmet', 'necklace', 'ring'].map((t) => (
+            <Slot key={t} type={t} item={byType(t)} onUnequip={unequip} />
+          ))}
+        </div>
+      </div>
+      <div className="equip-bottom">
+        <Slot type="boots" item={byType('boots')} onUnequip={unequip} />
+      </div>
+    </Panel>
+  );
+}
 
 function ItemCard({ item }) {
   const { state, dispatch } = useApp();
@@ -16,7 +68,6 @@ function ItemCard({ item }) {
   const [progress, setProgress] = useState('');
   const runRef = useRef(0); // отменённый запуск не должен опознать предмет позже
   const unidentified = item.state === 'unidentified';
-  const typeMeta = ITEM_TYPES[item.type] || ITEM_TYPES.weapon;
 
   async function identify() {
     if (busy) return;
@@ -53,7 +104,7 @@ function ItemCard({ item }) {
   return (
     <div className={`item-card rarity-${item.rarity} ${item.equipped ? 'equipped' : ''}`}>
       <div className="item-head">
-        <span className="item-icon">{unidentified ? '❔' : typeMeta.icon}</span>
+        <span className="item-icon">{unidentified ? <span className="item-unknown">?</span> : SLOT_ICONS[item.type]}</span>
         <span className={`card-rarity r-${item.rarity}`}>{RARITY_LABELS[item.rarity]}</span>
       </div>
       {unidentified ? (
@@ -77,6 +128,7 @@ function ItemCard({ item }) {
           <div className="item-desc dim">{item.desc}</div>
           <div className="item-bonus">
             +{item.bonus.value} <span className={`tag stat-${item.bonus.stat}`}>{STATS[item.bonus.stat]?.label}</span>
+            <span className="dim small">· {ITEM_TYPES[item.type]?.label}</span>
           </div>
           <div className="item-actions">
             {item.equipped ? (
@@ -95,30 +147,10 @@ function ItemCard({ item }) {
 export default function LootScreen() {
   const { state } = useApp();
   const items = state.data.inventory?.items ?? [];
-  const equipped = items.filter((i) => i.equipped);
 
   return (
     <div className="screen">
-      <Panel title="ЭКИПИРОВКА">
-        <div className="equip-slots">
-          {Object.entries(ITEM_TYPES).map(([type, meta]) => {
-            const item = equipped.find((i) => i.type === type);
-            return (
-              <div className={`equip-slot ${item ? `rarity-${item.rarity}` : 'empty'}`} key={type}>
-                <span className="equip-slot-type">{meta.icon} {meta.label}</span>
-                {item ? (
-                  <>
-                    <span className="item-name">{item.name}</span>
-                    <span className="item-bonus">+{item.bonus.value} {STATS[item.bonus.stat]?.label}</span>
-                  </>
-                ) : (
-                  <span className="dim">— пусто —</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Panel>
+      <EquipmentWindow />
 
       <Panel title={`ИНВЕНТАРЬ · ${items.length}`}>
         {items.length === 0 ? (

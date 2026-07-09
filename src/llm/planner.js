@@ -98,7 +98,10 @@ const ITEM_SYSTEM_PROMPT = `Ты — Система из «Поднятия ур
 Выход: {"name":"Доспех Теневого Монарха","desc":"Из брони сочится тьма, признавшая силу нового хозяина."}`;
 
 export async function generateItemLore(item, statLabel, model, onProgress) {
-  const typeLabel = { weapon: 'оружие', armor: 'броня', accessory: 'аксессуар' }[item.type] || 'артефакт';
+  const typeLabel = {
+    weapon: 'оружие', helmet: 'шлем', armor: 'доспех', gloves: 'перчатки',
+    necklace: 'ожерелье', ring: 'кольцо', boots: 'ботинки',
+  }[item.type] || 'артефакт';
   const engine = await getEngine(model, onProgress);
   onProgress?.('Система изучает предмет…');
 

@@ -67,11 +67,15 @@ export const CONFIG = {
   },
 };
 
-// Типы предметов инвентаря
+// Типы предметов инвентаря = слоты экипировки (окно EQUIPMENT)
 export const ITEM_TYPES = {
-  weapon: { label: 'Оружие', icon: '⚔️' },
-  armor: { label: 'Броня', icon: '🛡' },
-  accessory: { label: 'Аксессуар', icon: '💍' },
+  weapon: { label: 'Меч' },
+  helmet: { label: 'Шлем' },
+  armor: { label: 'Доспех' },
+  gloves: { label: 'Перчатки' },
+  necklace: { label: 'Ожерелье' },
+  ring: { label: 'Кольцо' },
+  boots: { label: 'Ботинки' },
 };
 
 // §4.1 — пять прокачиваемых сфер

@@ -3,9 +3,12 @@ import { taskXP, levelFromXP, rankForLevel, gameRarity } from '../lib/xp.js';
 import { uuid, todayKey, daysBetween, monthKey } from '../lib/util.js';
 import { rollDrop } from '../lib/loot.js';
 
-// Миграция данных, созданных до появления инвентаря
+// Миграция данных, созданных до появления инвентаря / расширения слотов
 function ensureShape(data) {
   if (!data.inventory) data.inventory = { items: [] };
+  for (const item of data.inventory.items) {
+    if (item.type === 'accessory') item.type = 'ring'; // старый тип → слот кольца
+  }
   return data;
 }
 

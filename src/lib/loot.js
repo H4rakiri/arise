@@ -34,7 +34,8 @@ export function rollRarity(difficulty, level) {
 export function rollDrop(difficulty, level, taskStat) {
   if (Math.random() >= (CONFIG.DROP.chance[difficulty] ?? 0)) return null;
   const rarity = rollRarity(difficulty, level);
-  const type = pick(['weapon', 'weapon', 'armor', 'accessory']); // оружие чуть чаще
+  // оружие чуть чаще остальных слотов
+  const type = pick(['weapon', 'weapon', 'helmet', 'armor', 'gloves', 'necklace', 'ring', 'boots']);
   const stat =
     Math.random() < CONFIG.DROP.sameStatChance && STAT_KEYS.includes(taskStat)
       ? taskStat
@@ -49,9 +50,13 @@ export function rollDrop(difficulty, level, taskStat) {
 // ---- локальный генератор лора (фолбэк без нейронки) ----
 
 const BASES = {
-  weapon: ['Клинок', 'Катана', 'Копьё', 'Кинжал', 'Лук', 'Коса', 'Молот'],
-  armor: ['Доспех', 'Плащ', 'Мантия', 'Наплечники', 'Латы', 'Капюшон'],
-  accessory: ['Кольцо', 'Амулет', 'Талисман', 'Серьга', 'Печать', 'Подвеска'],
+  weapon: ['Клинок', 'Катана', 'Копьё', 'Кинжал', 'Меч', 'Коса', 'Молот'],
+  helmet: ['Шлем', 'Капюшон', 'Корона', 'Маска', 'Диадема'],
+  armor: ['Доспех', 'Кираса', 'Мантия', 'Плащ', 'Латы'],
+  gloves: ['Перчатки', 'Рукавицы', 'Наручи'],
+  necklace: ['Амулет', 'Ожерелье', 'Кулон', 'Подвеска', 'Талисман'],
+  ring: ['Кольцо', 'Перстень', 'Печать'],
+  boots: ['Сапоги', 'Ботинки', 'Поножи'],
 };
 
 const PREFIXES = {
@@ -76,10 +81,12 @@ const DESCS = {
   legendary: 'Реликвия Монарха. Система признаёт его силу.',
 };
 
-// Приводим склонение: «Катана Мудреца» ок, префикс подстроим по роду грубо
+// Приводим склонение префикса по роду/числу основы (грубо, но хватает)
 function agreePrefix(prefix, base) {
-  const fem = /а$|ь$/.test(base) && !/ель$|мот$/.test(base);
-  const neu = /о$|ьё$|е$/.test(base);
+  const plural = /[иы]$/.test(base); // Перчатки, Сапоги, Латы…
+  const fem = /[ая]$|ь$/.test(base) && !/ень$/.test(base);
+  const neu = /[ое]$|ьё$/.test(base);
+  if (plural) return prefix.replace(/ый$|ий$/, (m) => (m === 'ий' ? 'ие' : 'ые'));
   if (fem) return prefix.replace(/ый$|ий$/, (m) => (m === 'ий' ? 'яя' : 'ая'));
   if (neu) return prefix.replace(/ый$|ий$/, (m) => (m === 'ий' ? 'ее' : 'ое'));
   return prefix;
