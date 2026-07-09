@@ -51,6 +51,7 @@ export function AppProvider({ children }) {
     const map = {
       xp: 'xp', 'new-quest': 'quest', levelup: 'levelup', rankup: 'rankup',
       card: 'card', freeze: 'freeze', streak: 'xp', 'dungeon-clear': 'levelup',
+      drop: 'card', identified: 'quest',
     };
     if (map[last.kind]) playSound(map[last.kind], enabled);
     // eslint-disable-next-line react-hooks/exhaustive-deps

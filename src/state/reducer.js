@@ -1,6 +1,13 @@
 import { CONFIG } from '../config.js';
 import { taskXP, levelFromXP, rankForLevel, gameRarity } from '../lib/xp.js';
 import { uuid, todayKey, daysBetween, monthKey } from '../lib/util.js';
+import { rollDrop } from '../lib/loot.js';
+
+// Миграция данных, созданных до появления инвентаря
+function ensureShape(data) {
+  if (!data.inventory) data.inventory = { items: [] };
+  return data;
+}
 
 // ---------- начисление XP: общий уровень + уровень стата (§4.1, §5.2) ----------
 
@@ -95,14 +102,14 @@ export function reducer(state, action) {
 
   switch (action.type) {
     case 'INIT_DATA': {
-      data = clone(action.data);
+      data = ensureShape(clone(action.data));
       maintainStreak(data, events);
       dirty = action.markDirty ?? false;
       break;
     }
 
     case 'REMOTE_DATA': {
-      data = clone(action.data);
+      data = ensureShape(clone(action.data));
       maintainStreak(data, events);
       dirty = false;
       break;
@@ -150,12 +157,67 @@ export function reducer(state, action) {
     }
 
     case 'COMPLETE_TASK': {
-      data = clone(data);
+      data = ensureShape(clone(data));
       const task = data.tasks.find((t) => t.id === action.id);
       if (!task || task.status === 'done') return state;
       task.status = 'done';
       task.completedAt = new Date().toISOString();
       awardXP(data, task.stat, task.xp, events);
+      // Дроп предмета: шанс по сложности, редкость — по сложности и уровню.
+      // Предмет падает «неопознанным», лор генерируется при опознании.
+      const drop = rollDrop(task.difficulty, data.profile.level, task.stat);
+      if (drop) {
+        data.inventory.items.unshift({
+          id: uuid(),
+          state: 'unidentified',
+          rarity: drop.rarity,
+          type: drop.type,
+          bonus: drop.bonus,
+          name: null,
+          desc: null,
+          equipped: false,
+          obtainedAt: new Date().toISOString(),
+          sourceTask: task.title,
+        });
+        events.push({ kind: 'drop', rarity: drop.rarity });
+      }
+      break;
+    }
+
+    case 'IDENTIFY_ITEM': {
+      data = ensureShape(clone(data));
+      const item = data.inventory.items.find((i) => i.id === action.id);
+      if (!item || item.state === 'identified') return state;
+      item.state = 'identified';
+      item.name = action.name;
+      item.desc = action.desc;
+      events.push({ kind: 'identified', name: action.name, rarity: item.rarity });
+      break;
+    }
+
+    case 'EQUIP_ITEM': {
+      data = ensureShape(clone(data));
+      const item = data.inventory.items.find((i) => i.id === action.id);
+      if (!item || item.state !== 'identified') return state;
+      // один предмет на слот (тип)
+      for (const other of data.inventory.items) {
+        if (other.type === item.type) other.equipped = false;
+      }
+      item.equipped = true;
+      break;
+    }
+
+    case 'UNEQUIP_ITEM': {
+      data = ensureShape(clone(data));
+      const item = data.inventory.items.find((i) => i.id === action.id);
+      if (!item) return state;
+      item.equipped = false;
+      break;
+    }
+
+    case 'DELETE_ITEM': {
+      data = ensureShape(clone(data));
+      data.inventory.items = data.inventory.items.filter((i) => i.id !== action.id);
       break;
     }
 
@@ -231,6 +293,25 @@ export function reducer(state, action) {
       dungeon.status = 'cleared';
       awardXP(data, dungeon.stat, dungeon.boss.xp, events);
       events.push({ kind: 'dungeon-clear', name: dungeon.name });
+      break;
+    }
+
+    case 'ADD_STEP': {
+      data = clone(data);
+      const dungeon = data.dungeons.find((d) => d.id === action.id);
+      if (!dungeon || dungeon.status === 'cleared') return state;
+      dungeon.steps.push({ title: action.title, done: false, xp: action.xp });
+      break;
+    }
+
+    case 'REMOVE_STEP': {
+      data = clone(data);
+      const dungeon = data.dungeons.find((d) => d.id === action.id);
+      const step = dungeon?.steps[action.index];
+      if (!step || dungeon.status === 'cleared') return state;
+      // выполненный шаг при удалении откатывает свой XP
+      if (step.done) awardXP(data, dungeon.stat, -step.xp, events);
+      dungeon.steps.splice(action.index, 1);
       break;
     }
 

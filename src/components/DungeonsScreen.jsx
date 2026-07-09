@@ -4,8 +4,12 @@ import { useApp } from '../state/AppContext.jsx';
 import { STATS } from '../config.js';
 
 // Данжи (§6.4): многоэтапная цель с шагами и боссом в конце.
+// Активный данж можно редактировать: добавлять и убирать шаги.
 function DungeonCard({ dungeon }) {
   const { dispatch } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [newStep, setNewStep] = useState('');
+  const [newStepXP, setNewStepXP] = useState(80);
   const totalXP = dungeon.steps.reduce((s, x) => s + x.xp, 0) + dungeon.boss.xp;
   const earned =
     dungeon.steps.filter((s) => s.done).reduce((s, x) => s + x.xp, 0) +
@@ -14,11 +18,24 @@ function DungeonCard({ dungeon }) {
   const stepsDone = dungeon.steps.every((s) => s.done);
   const cleared = dungeon.status === 'cleared';
 
+  function addStep(e) {
+    e.preventDefault();
+    const title = newStep.trim();
+    if (!title) return;
+    dispatch({ type: 'ADD_STEP', id: dungeon.id, title, xp: Number(newStepXP) || 0 });
+    setNewStep('');
+  }
+
   return (
     <Panel className={`dungeon ${cleared ? 'cleared' : ''}`} title={`${cleared ? 'ПРОЙДЕН · ' : 'ДАНЖ · '}${dungeon.name}`}>
       <div className="dungeon-meta">
         <span className={`tag stat-${dungeon.stat}`}>{STATS[dungeon.stat]?.label}</span>
         <span className="dim">{earned} / {totalXP} XP</span>
+        {!cleared && (
+          <button className="link-btn dungeon-edit-btn" onClick={() => setEditing(!editing)}>
+            {editing ? 'готово' : 'править'}
+          </button>
+        )}
         <button className="icon-btn" title="Удалить данж" onClick={() => dispatch({ type: 'DELETE_DUNGEON', id: dungeon.id })}>
           ✕
         </button>
@@ -39,9 +56,39 @@ function DungeonCard({ dungeon }) {
               <span>{s.title}</span>
               <span className="dim">+{s.xp} XP</span>
             </label>
+            {editing && (
+              <button
+                className="icon-btn"
+                title={s.done ? 'Убрать шаг (XP откатится)' : 'Убрать шаг'}
+                onClick={() => dispatch({ type: 'REMOVE_STEP', id: dungeon.id, index: i })}
+              >
+                ✕
+              </button>
+            )}
           </li>
         ))}
       </ul>
+      {editing && (
+        <form className="task-form-row dungeon-add-step" onSubmit={addStep}>
+          <input
+            className="input grow"
+            placeholder="Новый шаг…"
+            value={newStep}
+            onChange={(e) => setNewStep(e.target.value)}
+          />
+          <input
+            className="input xp-input"
+            type="number"
+            min="0"
+            value={newStepXP}
+            onChange={(e) => setNewStepXP(e.target.value)}
+          />
+          <span className="dim">XP</span>
+          <button className="btn mini primary" type="submit" disabled={!newStep.trim()}>
+            + шаг
+          </button>
+        </form>
+      )}
       <div className={`boss-row ${dungeon.boss.done ? 'done' : ''}`}>
         <span className="boss-label">☠ БОСС: {dungeon.boss.title}</span>
         <span className="task-xp">+{dungeon.boss.xp} XP</span>

@@ -81,6 +81,52 @@ function extractJSON(raw) {
   }
 }
 
+// Лор предмета инвентаря: маленькой модели даём максимально жёсткие рамки —
+// фиксированный формат, готовые примеры, короткий вывод. Механика (тип,
+// редкость, бонус) уже брошена локально — модель придумывает ТОЛЬКО название
+// и описание.
+const ITEM_SYSTEM_PROMPT = `Ты — Система из «Поднятия уровня в одиночку». Придумай название и описание предмета на русском.
+Ответь ТОЛЬКО валидным JSON: {"name":"...","desc":"..."} — без пояснений, без markdown.
+Правила: name — 2-4 слова, без кавычек внутри; desc — ОДНО предложение до 15 слов, мрачно-эпичный тон Системы.
+
+Примеры:
+Вход: оружие, редкость epic, усиливает Учёба
+Выход: {"name":"Клинок Забытых Теорем","desc":"Лезвие покрыто формулами, которые шепчут решения своему владельцу."}
+Вход: аксессуар, редкость common, усиливает Быт
+Выход: {"name":"Потёртое Кольцо Уборщика","desc":"Простое кольцо, но пыль будто сама избегает его хозяина."}
+Вход: броня, редкость legendary, усиливает Тело
+Выход: {"name":"Доспех Теневого Монарха","desc":"Из брони сочится тьма, признавшая силу нового хозяина."}`;
+
+export async function generateItemLore(item, statLabel, model, onProgress) {
+  const typeLabel = { weapon: 'оружие', armor: 'броня', accessory: 'аксессуар' }[item.type] || 'артефакт';
+  const engine = await getEngine(model, onProgress);
+  onProgress?.('Система изучает предмет…');
+
+  const request = (async () => {
+    const reply = await engine.chat.completions.create({
+      messages: [
+        { role: 'system', content: ITEM_SYSTEM_PROMPT },
+        { role: 'user', content: `Вход: ${typeLabel}, редкость ${item.rarity}, усиливает ${statLabel}` },
+      ],
+      temperature: 0.9,
+      max_tokens: 120,
+    });
+    return reply.choices[0].message.content;
+  })();
+
+  const raw = await Promise.race([
+    request,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('таймаут генерации')), 60000)),
+  ]);
+
+  const parsed = extractJSON(raw);
+  if (typeof parsed.name !== 'string' || !parsed.name.trim()) throw new Error('модель не вернула name');
+  return {
+    name: parsed.name.trim().slice(0, 60),
+    desc: typeof parsed.desc === 'string' ? parsed.desc.trim().slice(0, 200) : '',
+  };
+}
+
 export async function parsePlanLLM(text, model, onProgress) {
   const engine = await getEngine(model, onProgress);
   onProgress?.('Система анализирует план…');

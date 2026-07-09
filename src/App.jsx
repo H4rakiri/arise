@@ -5,6 +5,7 @@ import QuestsScreen from './components/QuestsScreen.jsx';
 import DailiesScreen from './components/DailiesScreen.jsx';
 import DungeonsScreen from './components/DungeonsScreen.jsx';
 import CollectionScreen from './components/CollectionScreen.jsx';
+import LootScreen from './components/LootScreen.jsx';
 import SettingsScreen from './components/SettingsScreen.jsx';
 import Notifications from './components/Notifications.jsx';
 import headerLogo from './assets/header-logo.svg';
@@ -15,6 +16,7 @@ const SCREENS = [
   { id: 'dailies', label: 'ДЕЙЛИКИ', component: DailiesScreen },
   { id: 'dungeons', label: 'ДАНЖИ', component: DungeonsScreen },
   { id: 'collection', label: 'КАРТЫ', component: CollectionScreen },
+  { id: 'loot', label: 'ЛУТ', component: LootScreen },
   { id: 'settings', label: 'СИСТЕМА', component: SettingsScreen },
 ];
 

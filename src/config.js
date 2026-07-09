@@ -49,6 +49,29 @@ export const CONFIG = {
 
   // §3 — дебаунс записи data.json через GitHub API, мс
   SYNC_DEBOUNCE_MS: 3000,
+
+  // ---- Инвентарь: дроп артефактов/оружия за задачи ----
+  DROP: {
+    // шанс дропа по сложности задачи
+    chance: { trivial: 0.07, normal: 0.15, hard: 0.3, epic: 0.6 },
+    // базовые веса редкостей
+    rarityWeights: { common: 62, rare: 25, epic: 10, legendary: 3 },
+    // множители роста весов: чем сложнее задача и выше уровень — тем лучше лут
+    diffBoost: { trivial: 0, normal: 0.5, hard: 1.5, epic: 3 },
+    // прибавка к множителю за каждый уровень персонажа
+    levelBoost: { rare: 0.01, epic: 0.02, legendary: 0.03 },
+    // размер бонуса к стату по редкости
+    bonusByRarity: { common: 1, rare: 2, epic: 3, legendary: 5 },
+    // вероятность, что бонус предмета — по стату закрытой задачи
+    sameStatChance: 0.7,
+  },
+};
+
+// Типы предметов инвентаря
+export const ITEM_TYPES = {
+  weapon: { label: 'Оружие', icon: '⚔️' },
+  armor: { label: 'Броня', icon: '🛡' },
+  accessory: { label: 'Аксессуар', icon: '💍' },
 };
 
 // §4.1 — пять прокачиваемых сфер

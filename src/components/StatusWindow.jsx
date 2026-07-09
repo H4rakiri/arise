@@ -35,6 +35,14 @@ export default function StatusWindow({ goTo }) {
 
   const overall = levelFromXP(profile.totalXP);
   const today = todayKey();
+  // Суммарные бонусы экипированных предметов по статам — «(+n)» в атрибутах
+  const equipBonuses = useMemo(() => {
+    const sums = {};
+    for (const item of data.inventory?.items ?? []) {
+      if (item.equipped) sums[item.bonus.stat] = (sums[item.bonus.stat] || 0) + item.bonus.value;
+    }
+    return sums;
+  }, [data]);
   const coolDays = useMemo(() => {
     const map = {};
     for (const key of Object.keys(STATS)) map[key] = lastActivityDays(data, key);
@@ -73,13 +81,17 @@ export default function StatusWindow({ goTo }) {
             const lv = levelFromXP(s.xp);
             const days = coolDays[key];
             const cool = days === null || days > CONFIG.STAT_COOL_DAYS;
+            const bonus = equipBonuses[key] || 0;
             return (
               <div className="stat-row" key={key}>
                 <span className="stat-name">
                   {meta.label} <span className="stat-kanji">{meta.jp}</span>
                 </span>
                 <XPBar into={lv.into} need={lv.need} cool={cool} />
-                <span className="stat-level">{s.level}</span>
+                <span className="stat-level">
+                  {s.level}
+                  {bonus > 0 && <em className="stat-bonus" title="Бонус экипировки">+{bonus}</em>}
+                </span>
               </div>
             );
           })}

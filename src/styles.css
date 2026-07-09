@@ -787,6 +787,76 @@ input[type='checkbox'] { accent-color: var(--accent-2); width: 16px; height: 16p
 .holo-card:hover .holo-actions { opacity: 1; }
 .holo-actions .btn { background: rgba(13, 9, 22, 0.8); backdrop-filter: blur(4px); }
 
+/* ---------- инвентарь и экипировка ---------- */
+
+.equip-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.equip-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: rgba(167, 130, 255, 0.04);
+}
+.equip-slot.empty { opacity: 0.55; border-style: dashed; }
+.equip-slot-type {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+.item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: rgba(167, 130, 255, 0.04);
+}
+.item-card.equipped { box-shadow: 0 0 14px rgba(124, 77, 255, 0.25); border-color: var(--border-bright); }
+.item-card.rarity-rare { border-color: rgba(124, 167, 255, 0.35); }
+.item-card.rarity-epic { border-color: rgba(196, 122, 255, 0.4); }
+.item-card.rarity-legendary { border-color: rgba(232, 199, 106, 0.45); }
+.equip-slot.rarity-rare { border-color: rgba(124, 167, 255, 0.35); }
+.equip-slot.rarity-epic { border-color: rgba(196, 122, 255, 0.4); }
+.equip-slot.rarity-legendary { border-color: rgba(232, 199, 106, 0.45); }
+
+.item-head { display: flex; justify-content: space-between; align-items: center; }
+.item-icon { font-size: 22px; }
+.item-name { font-weight: 700; font-size: 14px; }
+.item-desc { font-size: 12px; line-height: 1.4; flex: 1; }
+.item-bonus { font-family: var(--mono); font-size: 13px; color: var(--accent-bright); display: flex; align-items: center; gap: 6px; }
+.item-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+
+/* бонус экипировки в атрибутах: «LV (+n)» */
+.stat-bonus {
+  font-style: normal;
+  color: var(--ok);
+  font-size: 11px;
+  margin-left: 4px;
+  text-shadow: 0 0 8px rgba(125, 239, 196, 0.5);
+}
+
+/* редактирование данжа */
+.dungeon-steps li { display: flex; align-items: center; gap: 8px; }
+.dungeon-steps li label { flex: 1; }
+.dungeon-edit-btn { margin-left: auto; }
+.dungeon-meta .icon-btn { margin-left: 0; }
+.dungeon-add-step { margin-bottom: 14px; }
+
 /* ---------- настройки ---------- */
 
 .settings-row {
@@ -867,7 +937,7 @@ input[type='checkbox'] { accent-color: var(--accent-2); width: 16px; height: 16p
     margin: 0;
     padding: 6px 6px calc(8px + env(safe-area-inset-bottom));
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 0;
     background: rgba(10, 7, 16, 0.88);
     backdrop-filter: blur(16px);

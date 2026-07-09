@@ -6,7 +6,7 @@ import { STATS, RARITY_LABELS } from '../config.js';
 // Мелкие события гаснут сами, крупные (level-up, ранг) ждут клика.
 
 const AUTO_DISMISS_MS = 3200;
-const STICKY = new Set(['levelup', 'rankup', 'dungeon-clear', 'sync-error', 'sync-conflict', 'streak-broken']);
+const STICKY = new Set(['levelup', 'rankup', 'dungeon-clear', 'sync-error', 'sync-conflict', 'streak-broken', 'drop']);
 
 function render(e) {
   switch (e.kind) {
@@ -25,6 +25,13 @@ function render(e) {
       return { title: '「RANK UP」', body: `Новый ранг: ${e.rank}` };
     case 'card':
       return { title: '「CARD DROP」', body: `${e.title} — ${RARITY_LABELS[e.rarity] ?? e.rarity}` };
+    case 'drop':
+      return {
+        title: '「ITEM DROP」',
+        body: `Выпал неопознанный предмет · ${RARITY_LABELS[e.rarity] ?? e.rarity}. Опознай его в «ЛУТ».`,
+      };
+    case 'identified':
+      return { title: '「IDENTIFIED」', body: `${e.name} — ${RARITY_LABELS[e.rarity] ?? e.rarity}` };
     case 'streak':
       return { title: '「STREAK」', body: `Серия: ${e.current} дн.` };
     case 'streak-broken':
