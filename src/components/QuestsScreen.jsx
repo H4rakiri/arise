@@ -3,7 +3,7 @@ import Panel from './Panel.jsx';
 import TaskForm from './TaskForm.jsx';
 import PlanInput from './PlanInput.jsx';
 import { useApp } from '../state/AppContext.jsx';
-import { STATS } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 import { deadlineInfo } from '../lib/util.js';
 
 const SOURCE_MARK = { manual: '', heuristic: '·H', llm: '·AI' };
@@ -32,6 +32,7 @@ function sortByDeadline(a, b) {
 export default function QuestsScreen() {
   const { state, dispatch } = useApp();
   const [showDone, setShowDone] = useState(false);
+  const META = getStatsMeta(state.data);
   const todo = state.data.tasks.filter((t) => t.status === 'todo').sort(sortByDeadline);
   const done = state.data.tasks.filter((t) => t.status === 'done');
 
@@ -61,7 +62,7 @@ export default function QuestsScreen() {
                 </button>
                 <span className="task-title">{t.title}</span>
                 <DeadlineBadge deadline={t.deadline} />
-                <span className={`tag stat-${t.stat}`}>{STATS[t.stat]?.label}</span>
+                <span className={`tag stat-${t.stat}`}>{META[t.stat]?.label ?? t.stat}</span>
                 <span className="task-xp">+{t.xp} XP</span>
                 <span className="dim">{SOURCE_MARK[t.source]}</span>
                 <button className="icon-btn" title="Удалить" onClick={() => dispatch({ type: 'DELETE_TASK', id: t.id })}>
@@ -84,7 +85,7 @@ export default function QuestsScreen() {
                 <li className="task-item done" key={t.id}>
                   <span className="task-complete done">◆</span>
                   <span className="task-title">{t.title}</span>
-                  <span className={`tag stat-${t.stat}`}>{STATS[t.stat]?.label}</span>
+                  <span className={`tag stat-${t.stat}`}>{META[t.stat]?.label ?? t.stat}</span>
                   <span className="task-xp">+{t.xp}</span>
                 </li>
               ))}

@@ -53,17 +53,30 @@ export const CONFIG = {
   // ---- Инвентарь: дроп артефактов/оружия за задачи ----
   DROP: {
     // шанс дропа по сложности задачи
-    chance: { trivial: 0.07, normal: 0.15, hard: 0.3, epic: 0.6 },
+    chance: { trivial: 0.12, normal: 0.25, hard: 0.45, epic: 0.7 },
     // базовые веса редкостей
-    rarityWeights: { common: 62, rare: 25, epic: 10, legendary: 3 },
+    rarityWeights: { common: 52, rare: 30, epic: 14, legendary: 4 },
     // множители роста весов: чем сложнее задача и выше уровень — тем лучше лут
-    diffBoost: { trivial: 0, normal: 0.5, hard: 1.5, epic: 3 },
+    diffBoost: { trivial: 0, normal: 1, hard: 2.5, epic: 4.5 },
     // прибавка к множителю за каждый уровень персонажа
-    levelBoost: { rare: 0.01, epic: 0.02, legendary: 0.03 },
+    levelBoost: { rare: 0.015, epic: 0.03, legendary: 0.045 },
     // размер бонуса к стату по редкости
     bonusByRarity: { common: 1, rare: 2, epic: 3, legendary: 5 },
     // вероятность, что бонус предмета — по стату закрытой задачи
     sameStatChance: 0.7,
+    // доля расходников среди дропа
+    consumableChance: 0.25,
+    // XP эликсира по редкости
+    elixirXP: { common: 25, rare: 50, epic: 100, legendary: 250 },
+    // максимум заморозок в запасе
+    freezeCap: 4,
+    // XP шага данжа → «сложность» для броска дропа
+    stepXPBrackets: [
+      { maxXP: 49, difficulty: 'trivial' },
+      { maxXP: 119, difficulty: 'normal' },
+      { maxXP: 299, difficulty: 'hard' },
+      { maxXP: Infinity, difficulty: 'epic' },
+    ],
   },
 };
 

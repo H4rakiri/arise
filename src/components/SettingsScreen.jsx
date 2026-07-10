@@ -1,7 +1,73 @@
 import { useState } from 'react';
 import Panel from './Panel.jsx';
 import { useApp } from '../state/AppContext.jsx';
+import { getStatsMeta } from '../lib/stats.js';
 import { isWebGPUAvailable } from '../llm/planner.js';
+
+// Управление атрибутами: базовые можно переименовать, свои — создать и удалить
+function StatsEditor() {
+  const { state, dispatch } = useApp();
+  const META = getStatsMeta(state.data);
+  const [newLabel, setNewLabel] = useState('');
+
+  function add(e) {
+    e.preventDefault();
+    if (!newLabel.trim()) return;
+    dispatch({ type: 'ADD_STAT', label: newLabel });
+    setNewLabel('');
+  }
+
+  return (
+    <Panel title="АТРИБУТЫ">
+      <p className="dim small">
+        Переименуй любой атрибут или добавь свой под задачи, которые не влезают в базовые пять.
+        Удалить можно только созданные — вместе с их XP.
+      </p>
+      {Object.entries(META).map(([key, meta]) => {
+        const custom = key.startsWith('cs_');
+        return (
+          <div className="settings-row" key={key}>
+            <label>
+              {meta.jp || (custom ? 'свой' : key)}
+              <span className="dim small"> · LV.{state.data.stats[key].level}</span>
+            </label>
+            <div className="stat-edit-row">
+              <input
+                className="input grow"
+                value={meta.label}
+                onChange={(e) => dispatch({ type: 'RENAME_STAT', key, label: e.target.value })}
+              />
+              {custom && (
+                <button
+                  className="icon-btn"
+                  title="Удалить атрибут (его XP сгорит)"
+                  onClick={() => {
+                    if (window.confirm(`Удалить атрибут «${meta.label}»? Его ${state.data.stats[key].xp} XP сгорит.`)) {
+                      dispatch({ type: 'DELETE_STAT', key });
+                    }
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <form className="task-form-row" onSubmit={add}>
+        <input
+          className="input grow"
+          placeholder="Название нового атрибута…"
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+        />
+        <button className="btn primary" type="submit" disabled={!newLabel.trim()}>
+          Добавить
+        </button>
+      </form>
+    </Panel>
+  );
+}
 
 export default function SettingsScreen() {
   const { state, dispatch, token, setToken, syncStatus } = useApp();
@@ -35,6 +101,8 @@ export default function SettingsScreen() {
           />
         </div>
       </Panel>
+
+      <StatsEditor />
 
       <Panel title="СИНХРОНИЗАЦИЯ">
         <p className="dim small">

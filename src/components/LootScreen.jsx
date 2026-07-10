@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import Panel from './Panel.jsx';
 import { useApp } from '../state/AppContext.jsx';
-import { ITEM_TYPES, RARITY_LABELS, STATS } from '../config.js';
+import { ITEM_TYPES, RARITY_LABELS } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 import { localLore } from '../lib/loot.js';
 import { SLOT_ICONS, Silhouette } from './SlotIcons.jsx';
 import { isWebGPUAvailable, generateItemLore, cancelLLM } from '../llm/planner.js';
@@ -10,7 +11,7 @@ import { isWebGPUAvailable, generateItemLore, cancelLLM } from '../llm/planner.j
 // лор (нейронкой, если включена, иначе локальными таблицами).
 // Экипировка — окно EQUIPMENT: силуэт охотника и 7 слотов вокруг.
 
-function Slot({ type, item, onUnequip }) {
+function Slot({ type, item, onUnequip, statsMeta }) {
   const meta = ITEM_TYPES[type];
   return (
     <div className={`equip-slot ${item ? `rarity-${item.rarity}` : 'empty'}`}>
@@ -20,7 +21,7 @@ function Slot({ type, item, onUnequip }) {
         {item ? (
           <>
             <span className="equip-item-name">{item.name}</span>
-            <span className="equip-item-bonus">{STATS[item.bonus.stat]?.label} +{item.bonus.value}</span>
+            <span className="equip-item-bonus">{statsMeta[item.bonus.stat]?.label ?? item.bonus.stat} +{item.bonus.value}</span>
             <button className="link-btn equip-off" onClick={() => onUnequip(item.id)}>снять</button>
           </>
         ) : (
@@ -33,6 +34,7 @@ function Slot({ type, item, onUnequip }) {
 
 function EquipmentWindow() {
   const { state, dispatch } = useApp();
+  const statsMeta = getStatsMeta(state.data);
   const items = state.data.inventory?.items ?? [];
   const byType = (t) => items.find((i) => i.equipped && i.type === t);
   const unequip = (id) => dispatch({ type: 'UNEQUIP_ITEM', id });
@@ -42,7 +44,7 @@ function EquipmentWindow() {
       <div className="equip-window">
         <div className="equip-col">
           {['weapon', 'armor', 'gloves'].map((t) => (
-            <Slot key={t} type={t} item={byType(t)} onUnequip={unequip} />
+            <Slot key={t} type={t} item={byType(t)} onUnequip={unequip} statsMeta={statsMeta} />
           ))}
         </div>
         <div className="equip-figure">
@@ -50,12 +52,12 @@ function EquipmentWindow() {
         </div>
         <div className="equip-col right">
           {['helmet', 'necklace', 'ring'].map((t) => (
-            <Slot key={t} type={t} item={byType(t)} onUnequip={unequip} />
+            <Slot key={t} type={t} item={byType(t)} onUnequip={unequip} statsMeta={statsMeta} />
           ))}
         </div>
       </div>
       <div className="equip-bottom">
-        <Slot type="boots" item={byType('boots')} onUnequip={unequip} />
+        <Slot type="boots" item={byType('boots')} onUnequip={unequip} statsMeta={statsMeta} />
       </div>
     </Panel>
   );
@@ -64,6 +66,8 @@ function EquipmentWindow() {
 function ItemCard({ item }) {
   const { state, dispatch } = useApp();
   const { llmEnabled, llmModel } = state.data.settings;
+  const statsMeta = getStatsMeta(state.data);
+  const bonusLabel = statsMeta[item.bonus.stat]?.label ?? item.bonus.stat;
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const runRef = useRef(0); // отменённый запуск не должен опознать предмет позже
@@ -77,7 +81,7 @@ function ItemCard({ item }) {
       setBusy(true);
       setProgress('Загрузка модели…');
       try {
-        lore = await generateItemLore(item, STATS[item.bonus.stat]?.label || item.bonus.stat, llmModel, (p) => {
+        lore = await generateItemLore(item, bonusLabel, llmModel, (p) => {
           if (runId === runRef.current) setProgress(p);
         });
       } catch {
@@ -90,7 +94,7 @@ function ItemCard({ item }) {
       }
     }
     if (runId !== runRef.current) return; // отменили
-    if (!lore) lore = localLore(item);
+    if (!lore) lore = localLore(item, bonusLabel);
     dispatch({ type: 'IDENTIFY_ITEM', id: item.id, name: lore.name, desc: lore.desc });
   }
 
@@ -104,7 +108,7 @@ function ItemCard({ item }) {
   return (
     <div className={`item-card rarity-${item.rarity} ${item.equipped ? 'equipped' : ''}`}>
       <div className="item-head">
-        <span className="item-icon">{unidentified ? <span className="item-unknown">?</span> : SLOT_ICONS[item.type]}</span>
+        <span className="item-icon">{unidentified ? <span className="item-unknown">?</span> : item.kind === 'consumable' ? <span className="item-consumable">{item.ctype === 'freeze' ? '❄' : '⚗'}</span> : SLOT_ICONS[item.type]}</span>
         <span className={`card-rarity r-${item.rarity}`}>{RARITY_LABELS[item.rarity]}</span>
       </div>
       {unidentified ? (
@@ -127,11 +131,16 @@ function ItemCard({ item }) {
           <div className="item-name">{item.name}</div>
           <div className="item-desc dim">{item.desc}</div>
           <div className="item-bonus">
-            +{item.bonus.value} <span className={`tag stat-${item.bonus.stat}`}>{STATS[item.bonus.stat]?.label}</span>
-            <span className="dim small">· {ITEM_TYPES[item.type]?.label}</span>
+            {item.kind === 'consumable' ? (
+              item.ctype === 'freeze' ? <span className="dim small">расходник</span> : <>+{item.bonus.value} XP <span className={`tag stat-${item.bonus.stat}`}>{bonusLabel}</span></>
+            ) : (
+              <>+{item.bonus.value} <span className={`tag stat-${item.bonus.stat}`}>{bonusLabel}</span> <span className="dim small">· {ITEM_TYPES[item.type]?.label}</span></>
+            )}
           </div>
           <div className="item-actions">
-            {item.equipped ? (
+            {item.kind === 'consumable' ? (
+              <button className="btn mini primary" onClick={() => dispatch({ type: 'USE_ITEM', id: item.id })}>Использовать</button>
+            ) : item.equipped ? (
               <button className="btn mini" onClick={() => dispatch({ type: 'UNEQUIP_ITEM', id: item.id })}>Снять</button>
             ) : (
               <button className="btn mini primary" onClick={() => dispatch({ type: 'EQUIP_ITEM', id: item.id })}>Экипировать</button>

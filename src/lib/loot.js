@@ -3,12 +3,20 @@
 // при выпадении; нейронка (или локальные таблицы) добавляет только «лор» —
 // название и описание — в момент опознания.
 
-import { CONFIG, STAT_KEYS, STATS } from '../config.js';
+import { CONFIG } from '../config.js';
 
 const RARITIES = ['common', 'rare', 'epic', 'legendary'];
 
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// XP шага данжа → эквивалент сложности для броска дропа
+export function diffForXP(xp) {
+  for (const { maxXP, difficulty } of CONFIG.DROP.stepXPBrackets) {
+    if (xp <= maxXP) return difficulty;
+  }
+  return 'normal';
 }
 
 // Бросок редкости: веса растут со сложностью задачи и уровнем персонажа
@@ -30,17 +38,50 @@ export function rollRarity(difficulty, level) {
   return 'common';
 }
 
-// Пытается выбить предмет за закрытую задачу. null — не повезло.
-export function rollDrop(difficulty, level, taskStat) {
-  if (Math.random() >= (CONFIG.DROP.chance[difficulty] ?? 0)) return null;
+const ELIXIR_NAMES = {
+  common: 'Малый эликсир опыта',
+  rare: 'Средний эликсир опыта',
+  epic: 'Большой эликсир опыта',
+  legendary: 'Монарший эликсир опыта',
+};
+
+// Бросок дропа. Возвращает дескриптор экипировки или расходника, либо null.
+// guaranteed — награда (левел-ап, босс, закрытый день): шанс не бросается.
+export function rollDrop(difficulty, level, taskStat, statKeys, guaranteed = false) {
+  if (!guaranteed && Math.random() >= (CONFIG.DROP.chance[difficulty] ?? 0)) return null;
   const rarity = rollRarity(difficulty, level);
-  // оружие чуть чаще остальных слотов
-  const type = pick(['weapon', 'weapon', 'helmet', 'armor', 'gloves', 'necklace', 'ring', 'boots']);
+  const keys = statKeys?.length ? statKeys : ['work'];
   const stat =
-    Math.random() < CONFIG.DROP.sameStatChance && STAT_KEYS.includes(taskStat)
-      ? taskStat
-      : pick(STAT_KEYS);
+    Math.random() < CONFIG.DROP.sameStatChance && keys.includes(taskStat) ? taskStat : pick(keys);
+
+  // расходники: кристалл заморозки или эликсир опыта
+  if (Math.random() < CONFIG.DROP.consumableChance) {
+    if (Math.random() < 0.45) {
+      const big = rarity === 'legendary';
+      return {
+        kind: 'consumable',
+        ctype: 'freeze',
+        rarity,
+        bonus: { stat: null, value: big ? 2 : 1 },
+        name: big ? 'Великий кристалл заморозки' : 'Кристалл заморозки',
+        desc: `Добавляет ${big ? 'две заморозки' : 'одну заморозку'} серии (запас до ${CONFIG.DROP.freezeCap}).`,
+      };
+    }
+    const xp = CONFIG.DROP.elixirXP[rarity];
+    return {
+      kind: 'consumable',
+      ctype: 'elixir',
+      rarity,
+      bonus: { stat, value: xp },
+      name: ELIXIR_NAMES[rarity],
+      desc: `Мгновенно даёт +${xp} XP.`,
+    };
+  }
+
+  // экипировка: оружие чуть чаще остальных слотов
+  const type = pick(['weapon', 'weapon', 'helmet', 'armor', 'gloves', 'necklace', 'ring', 'boots']);
   return {
+    kind: 'equipment',
     rarity,
     type,
     bonus: { stat, value: CONFIG.DROP.bonusByRarity[rarity] },
@@ -92,11 +133,11 @@ function agreePrefix(prefix, base) {
   return prefix;
 }
 
-export function localLore(item) {
+export function localLore(item, statLabel) {
   const base = pick(BASES[item.type] || BASES.weapon);
   const prefix = agreePrefix(pick(PREFIXES[item.rarity]), base);
   return {
     name: `${prefix} ${base} ${SUFFIXES[item.bonus.stat] || ''}`.trim(),
-    desc: `${DESCS[item.rarity]} Усиливает: ${STATS[item.bonus.stat]?.label}.`,
+    desc: `${DESCS[item.rarity]} Усиливает: ${statLabel}.`,
   };
 }

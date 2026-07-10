@@ -2,7 +2,8 @@ import { useState } from 'react';
 import Panel from './Panel.jsx';
 import TimeInput from './TimeInput.jsx';
 import { useApp } from '../state/AppContext.jsx';
-import { CONFIG, STATS } from '../config.js';
+import { CONFIG } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 import { taskXP } from '../lib/xp.js';
 import { todayKey } from '../lib/util.js';
 
@@ -10,6 +11,7 @@ import { todayKey } from '../lib/util.js';
 export default function DailiesScreen() {
   const { state, dispatch } = useApp();
   const { dailies, streak } = state.data;
+  const META = getStatsMeta(state.data);
   const today = todayKey();
   const [title, setTitle] = useState('');
   const [stat, setStat] = useState('jp');
@@ -64,7 +66,7 @@ export default function DailiesScreen() {
                   onChange={() => dispatch({ type: 'TOGGLE_DAILY', id: d.id })}
                 />
                 <span className="task-title">{d.title}</span>
-                <span className={`tag stat-${d.stat}`}>{STATS[d.stat]?.label}</span>
+                <span className={`tag stat-${d.stat}`}>{META[d.stat]?.label ?? d.stat}</span>
                 <span className="task-xp">+{d.xp} XP</span>
                 <span className="daily-week">
                   {week.map((day) => (
@@ -90,7 +92,7 @@ export default function DailiesScreen() {
           />
           <div className="task-form-row">
             <select className="select" value={stat} onChange={(e) => setStat(e.target.value)}>
-              {Object.entries(STATS).map(([k, v]) => (
+              {Object.entries(META).map(([k, v]) => (
                 <option key={k} value={k}>{v.label}</option>
               ))}
             </select>

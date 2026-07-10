@@ -3,7 +3,8 @@ import Panel from './Panel.jsx';
 import XPBar from './XPBar.jsx';
 import TaskForm from './TaskForm.jsx';
 import { useApp } from '../state/AppContext.jsx';
-import { CONFIG, STATS } from '../config.js';
+import { CONFIG } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 import { levelFromXP } from '../lib/xp.js';
 import { todayKey, daysBetween } from '../lib/util.js';
 
@@ -45,7 +46,7 @@ export default function StatusWindow({ goTo }) {
   }, [data]);
   const coolDays = useMemo(() => {
     const map = {};
-    for (const key of Object.keys(STATS)) map[key] = lastActivityDays(data, key);
+    for (const key of Object.keys(data.stats)) map[key] = lastActivityDays(data, key);
     return map;
   }, [data]);
 
@@ -76,7 +77,7 @@ export default function StatusWindow({ goTo }) {
 
       <Panel title="АТРИБУТЫ">
         <div className="stats-list">
-          {Object.entries(STATS).map(([key, meta]) => {
+          {Object.entries(getStatsMeta(data)).map(([key, meta]) => {
             const s = stats[key];
             const lv = levelFromXP(s.xp);
             const days = coolDays[key];
@@ -85,7 +86,7 @@ export default function StatusWindow({ goTo }) {
             return (
               <div className="stat-row" key={key}>
                 <span className="stat-name">
-                  {meta.label} <span className="stat-kanji">{meta.jp}</span>
+                  {meta.label} {meta.jp && <span className="stat-kanji">{meta.jp}</span>}
                 </span>
                 <XPBar into={lv.into} need={lv.need} cool={cool} />
                 <span className="stat-level">

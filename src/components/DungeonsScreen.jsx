@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import Panel from './Panel.jsx';
 import { useApp } from '../state/AppContext.jsx';
-import { STATS } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 
 // Данжи (§6.4): многоэтапная цель с шагами и боссом в конце.
 // Активный данж можно редактировать: добавлять и убирать шаги.
 function DungeonCard({ dungeon }) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
+  const META = getStatsMeta(state.data);
   const [editing, setEditing] = useState(false);
   const [newStep, setNewStep] = useState('');
   const [newStepXP, setNewStepXP] = useState(80);
@@ -29,7 +30,7 @@ function DungeonCard({ dungeon }) {
   return (
     <Panel className={`dungeon ${cleared ? 'cleared' : ''}`} title={`${cleared ? 'ПРОЙДЕН · ' : 'ДАНЖ · '}${dungeon.name}`}>
       <div className="dungeon-meta">
-        <span className={`tag stat-${dungeon.stat}`}>{STATS[dungeon.stat]?.label}</span>
+        <span className={`tag stat-${dungeon.stat}`}>{META[dungeon.stat]?.label ?? dungeon.stat}</span>
         <span className="dim">{earned} / {totalXP} XP</span>
         {!cleared && (
           <button className="link-btn dungeon-edit-btn" onClick={() => setEditing(!editing)}>
@@ -110,6 +111,7 @@ function DungeonCard({ dungeon }) {
 export default function DungeonsScreen() {
   const { state, dispatch } = useApp();
   const { dungeons } = state.data;
+  const META = getStatsMeta(state.data);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [stat, setStat] = useState('study');
@@ -152,7 +154,7 @@ export default function DungeonsScreen() {
             <div className="task-form-row">
               <input className="input grow" placeholder="Название данжа (напр. «Защита магистерской»)" value={name} onChange={(e) => setName(e.target.value)} />
               <select className="select" value={stat} onChange={(e) => setStat(e.target.value)}>
-                {Object.entries(STATS).map(([k, v]) => (
+                {Object.entries(META).map(([k, v]) => (
                   <option key={k} value={k}>{v.label}</option>
                 ))}
               </select>

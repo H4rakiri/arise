@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useApp } from '../state/AppContext.jsx';
-import { CONFIG, STATS } from '../config.js';
+import { CONFIG } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 import { taskXP } from '../lib/xp.js';
 import TimeInput from './TimeInput.jsx';
 import { parsePlanHeuristic } from '../lib/heuristic.js';
@@ -12,6 +13,7 @@ import { isWebGPUAvailable, parsePlanLLM, cancelLLM } from '../llm/planner.js';
 export default function PlanInput() {
   const { state, dispatch } = useApp();
   const { llmEnabled, llmModel } = state.data.settings;
+  const META = getStatsMeta(state.data);
   const [text, setText] = useState('');
   const [draft, setDraft] = useState(null);
   const [source, setSource] = useState('heuristic');
@@ -112,7 +114,7 @@ export default function PlanInput() {
                 onChange={(e) => patchDraft(i, 'title', e.target.value)}
               />
               <select className="select" value={t.stat} onChange={(e) => patchDraft(i, 'stat', e.target.value)}>
-                {Object.entries(STATS).map(([k, v]) => (
+                {Object.entries(META).map(([k, v]) => (
                   <option key={k} value={k}>{v.label}</option>
                 ))}
               </select>

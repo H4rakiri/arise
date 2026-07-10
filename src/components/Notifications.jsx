@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useApp } from '../state/AppContext.jsx';
-import { STATS, RARITY_LABELS } from '../config.js';
+import { RARITY_LABELS } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 
 // Всплывающие окна Системы (§8.1): появление с лёгким глитчем и fade-in.
 // Мелкие события гаснут сами, крупные (level-up, ранг) ждут клика.
@@ -8,10 +9,17 @@ import { STATS, RARITY_LABELS } from '../config.js';
 const AUTO_DISMISS_MS = 3200;
 const STICKY = new Set(['levelup', 'rankup', 'dungeon-clear', 'sync-error', 'sync-conflict', 'streak-broken', 'drop']);
 
-function render(e) {
+const DROP_REASONS = {
+  levelup: 'Награда за новый уровень!',
+  daily: 'Награда за закрытый день!',
+  boss: 'Трофей с босса!',
+  step: 'Добыча из данжа.',
+};
+
+function render(e, statsMeta) {
   switch (e.kind) {
     case 'xp':
-      return { title: '「XP」', body: `+${e.amount} XP → ${STATS[e.stat]?.label ?? e.stat}` };
+      return { title: '「XP」', body: `+${e.amount} XP → ${statsMeta[e.stat]?.label ?? e.stat}` };
     case 'new-quest':
       return {
         title: '「NOTIFICATION」',
@@ -19,17 +27,23 @@ function render(e) {
       };
     case 'levelup':
       return { title: '「LEVEL UP」', body: `Уровень ${e.level}. Ты стал сильнее.` };
-    case 'stat-levelup':
-      return { title: '「STAT UP」', body: `${STATS[e.stat]?.label ?? e.stat} → уровень ${e.level}` };
     case 'rankup':
       return { title: '「RANK UP」', body: `Новый ранг: ${e.rank}` };
     case 'card':
       return { title: '「CARD DROP」', body: `${e.title} — ${RARITY_LABELS[e.rarity] ?? e.rarity}` };
-    case 'drop':
+    case 'drop': {
+      const what = e.itemName
+        ? `${e.itemName} · ${RARITY_LABELS[e.rarity] ?? e.rarity}`
+        : `Неопознанный предмет · ${RARITY_LABELS[e.rarity] ?? e.rarity}. Опознай его в «ЛУТ».`;
       return {
         title: '「ITEM DROP」',
-        body: `Выпал неопознанный предмет · ${RARITY_LABELS[e.rarity] ?? e.rarity}. Опознай его в «ЛУТ».`,
+        body: `${e.reason ? DROP_REASONS[e.reason] + ' ' : ''}${what}`,
       };
+    }
+    case 'freeze-gain':
+      return { title: '「FREEZE」', body: `Заморозка добавлена. Запас: ${'❄'.repeat(e.left)}` };
+    case 'stat-levelup':
+      return { title: '「STAT UP」', body: `${statsMeta[e.stat]?.label ?? e.stat} → уровень ${e.level}` };
     case 'identified':
       return { title: '「IDENTIFIED」', body: `${e.name} — ${RARITY_LABELS[e.rarity] ?? e.rarity}` };
     case 'streak':
@@ -51,14 +65,14 @@ function render(e) {
   }
 }
 
-function Toast({ event, onDismiss }) {
+function Toast({ event, onDismiss, statsMeta }) {
   const sticky = STICKY.has(event.kind);
   useEffect(() => {
     if (sticky) return;
     const t = setTimeout(onDismiss, AUTO_DISMISS_MS);
     return () => clearTimeout(t);
   }, [sticky, onDismiss]);
-  const { title, body } = render(event);
+  const { title, body } = render(event, statsMeta);
   return (
     <div className={`toast toast-${event.kind} ${sticky ? 'sticky' : ''}`} onClick={onDismiss}>
       <div className="toast-title glitch" data-text={title}>{title}</div>
@@ -70,11 +84,12 @@ function Toast({ event, onDismiss }) {
 
 export default function Notifications() {
   const { state, dispatch } = useApp();
+  const statsMeta = getStatsMeta(state.data);
   const visible = state.events.slice(-4);
   return (
     <div className="toasts">
       {visible.map((e) => (
-        <Toast key={e.id} event={e} onDismiss={() => dispatch({ type: 'DISMISS_EVENT', id: e.id })} />
+        <Toast key={e.id} event={e} statsMeta={statsMeta} onDismiss={() => dispatch({ type: 'DISMISS_EVENT', id: e.id })} />
       ))}
     </div>
   );

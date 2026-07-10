@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { CONFIG, STATS } from '../config.js';
+import { CONFIG } from '../config.js';
+import { getStatsMeta } from '../lib/stats.js';
 import { taskXP } from '../lib/xp.js';
 import { useApp } from '../state/AppContext.jsx';
 import TimeInput from './TimeInput.jsx';
@@ -7,7 +8,8 @@ import TimeInput from './TimeInput.jsx';
 // Быстрое добавление (§6.1): название, стат, сложность, время вручную
 // (минуты/часы) и опциональный дедлайн. XP-превью считается на лету.
 export default function TaskForm({ onAdded }) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
+  const META = getStatsMeta(state.data);
   const [title, setTitle] = useState('');
   const [stat, setStat] = useState('work');
   const [difficulty, setDifficulty] = useState('normal');
@@ -36,7 +38,7 @@ export default function TaskForm({ onAdded }) {
       />
       <div className="task-form-row">
         <select className="select" value={stat} onChange={(e) => setStat(e.target.value)}>
-          {Object.entries(STATS).map(([k, v]) => (
+          {Object.entries(META).map(([k, v]) => (
             <option key={k} value={k}>{v.label}</option>
           ))}
         </select>

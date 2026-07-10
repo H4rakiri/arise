@@ -1,15 +1,44 @@
 import { CONFIG } from '../config.js';
 import { taskXP, levelFromXP, rankForLevel, gameRarity } from '../lib/xp.js';
 import { uuid, todayKey, daysBetween, monthKey } from '../lib/util.js';
-import { rollDrop } from '../lib/loot.js';
+import { rollDrop, diffForXP } from '../lib/loot.js';
 
 // Миграция данных, созданных до появления инвентаря / расширения слотов
 function ensureShape(data) {
   if (!data.inventory) data.inventory = { items: [] };
+  if (!data.statsMeta) data.statsMeta = {};
   for (const item of data.inventory.items) {
     if (item.type === 'accessory') item.type = 'ring'; // старый тип → слот кольца
+    if (!item.kind) item.kind = 'equipment';
   }
   return data;
+}
+
+// Кладёт дескриптор дропа в инвентарь и создаёт событие.
+// reason — за что награда: null (обычный дроп) | 'levelup' | 'daily' | 'boss' | 'step'
+function pushDrop(data, drop, events, reason = null, source = '') {
+  if (!drop) return;
+  if (!data.inventory) data.inventory = { items: [] };
+  const base = {
+    id: uuid(),
+    kind: drop.kind,
+    rarity: drop.rarity,
+    bonus: drop.bonus,
+    equipped: false,
+    obtainedAt: new Date().toISOString(),
+    sourceTask: source,
+  };
+  if (drop.kind === 'consumable') {
+    data.inventory.items.unshift({ ...base, ctype: drop.ctype, type: null, state: 'identified', name: drop.name, desc: drop.desc });
+  } else {
+    data.inventory.items.unshift({ ...base, type: drop.type, state: 'unidentified', name: null, desc: null });
+  }
+  events.push({
+    kind: 'drop',
+    rarity: drop.rarity,
+    reason,
+    itemName: drop.kind === 'consumable' ? drop.name : null,
+  });
 }
 
 // ---------- начисление XP: общий уровень + уровень стата (§4.1, §5.2) ----------
@@ -32,7 +61,17 @@ function awardXP(data, statKey, amount, events) {
   p.rank = rankForLevel(p.level);
   if (amount > 0) {
     events.push({ kind: 'xp', amount, stat: statKey });
-    if (p.level > beforeLevel) events.push({ kind: 'levelup', level: p.level });
+    if (p.level > beforeLevel) {
+      events.push({ kind: 'levelup', level: p.level });
+      // награда за новый уровень: гарантированный дроп с «эпической» таблицей
+      pushDrop(
+        data,
+        rollDrop('epic', p.level, statKey, Object.keys(data.stats), true),
+        events,
+        'levelup',
+        `Уровень ${p.level}`
+      );
+    }
     if (p.rank !== beforeRank) events.push({ kind: 'rankup', rank: p.rank });
   }
 }
@@ -82,6 +121,14 @@ function updateStreakAfterDailies(data, events) {
       s.lastCompletedDate = today;
       if (s.current > s.best) s.best = s.current;
       events.push({ kind: 'streak', current: s.current });
+      // награда за полностью закрытый день — гарантированный дроп (раз в день)
+      pushDrop(
+        data,
+        rollDrop('normal', data.profile.level, null, Object.keys(data.stats), true),
+        events,
+        'daily',
+        'Все дейлики дня'
+      );
     }
   } else if (s.lastCompletedDate === today) {
     // День «раззавершили» — откатываем сегодняшний инкремент
@@ -167,23 +214,32 @@ export function reducer(state, action) {
       task.completedAt = new Date().toISOString();
       awardXP(data, task.stat, task.xp, events);
       // Дроп предмета: шанс по сложности, редкость — по сложности и уровню.
-      // Предмет падает «неопознанным», лор генерируется при опознании.
-      const drop = rollDrop(task.difficulty, data.profile.level, task.stat);
-      if (drop) {
-        data.inventory.items.unshift({
-          id: uuid(),
-          state: 'unidentified',
-          rarity: drop.rarity,
-          type: drop.type,
-          bonus: drop.bonus,
-          name: null,
-          desc: null,
-          equipped: false,
-          obtainedAt: new Date().toISOString(),
-          sourceTask: task.title,
-        });
-        events.push({ kind: 'drop', rarity: drop.rarity });
+      // Экипировка падает «неопознанной», расходники — готовыми.
+      pushDrop(
+        data,
+        rollDrop(task.difficulty, data.profile.level, task.stat, Object.keys(data.stats)),
+        events,
+        null,
+        task.title
+      );
+      break;
+    }
+
+    case 'USE_ITEM': {
+      data = ensureShape(clone(data));
+      const item = data.inventory.items.find((i) => i.id === action.id);
+      if (!item || item.kind !== 'consumable') return state;
+      if (item.ctype === 'freeze') {
+        if (data.streak.freezes >= CONFIG.DROP.freezeCap) {
+          events.push({ kind: 'system', message: `Запас заморозок уже полон (${CONFIG.DROP.freezeCap}). Кристалл сохранён.` });
+          break;
+        }
+        data.streak.freezes = Math.min(CONFIG.DROP.freezeCap, data.streak.freezes + item.bonus.value);
+        events.push({ kind: 'freeze-gain', left: data.streak.freezes });
+      } else {
+        awardXP(data, item.bonus.stat, item.bonus.value, events);
       }
+      data.inventory.items = data.inventory.items.filter((i) => i.id !== action.id);
       break;
     }
 
@@ -279,23 +335,41 @@ export function reducer(state, action) {
     }
 
     case 'TOGGLE_STEP': {
-      data = clone(data);
+      data = ensureShape(clone(data));
       const dungeon = data.dungeons.find((d) => d.id === action.id);
       const step = dungeon?.steps[action.index];
       if (!step) return state;
       step.done = !step.done;
       awardXP(data, dungeon.stat, step.done ? step.xp : -step.xp, events);
+      // добыча из данжа: шанс по «весу» шага
+      if (step.done) {
+        pushDrop(
+          data,
+          rollDrop(diffForXP(step.xp), data.profile.level, dungeon.stat, Object.keys(data.stats)),
+          events,
+          'step',
+          `${dungeon.name}: ${step.title}`
+        );
+      }
       break;
     }
 
     case 'DEFEAT_BOSS': {
-      data = clone(data);
+      data = ensureShape(clone(data));
       const dungeon = data.dungeons.find((d) => d.id === action.id);
       if (!dungeon || dungeon.boss.done) return state;
       dungeon.boss.done = true;
       dungeon.status = 'cleared';
       awardXP(data, dungeon.stat, dungeon.boss.xp, events);
       events.push({ kind: 'dungeon-clear', name: dungeon.name });
+      // трофей с босса — гарантированный дроп с «эпической» таблицей
+      pushDrop(
+        data,
+        rollDrop('epic', data.profile.level, dungeon.stat, Object.keys(data.stats), true),
+        events,
+        'boss',
+        `Босс: ${dungeon.boss.title}`
+      );
       break;
     }
 
@@ -365,6 +439,39 @@ export function reducer(state, action) {
     case 'DELETE_CARD': {
       data = clone(data);
       data.cards[action.collection] = data.cards[action.collection].filter((c) => c.id !== action.id);
+      break;
+    }
+
+    case 'ADD_STAT': {
+      data = ensureShape(clone(data));
+      const label = action.label.trim();
+      if (!label) return state;
+      const key = 'cs_' + uuid().slice(0, 8);
+      data.stats[key] = { xp: 0, level: 1 };
+      data.statsMeta[key] = { label };
+      events.push({ kind: 'system', message: `Новый атрибут: ${label}` });
+      break;
+    }
+
+    case 'RENAME_STAT': {
+      data = ensureShape(clone(data));
+      const label = action.label.trim();
+      if (!label || !data.stats[action.key]) return state;
+      data.statsMeta[action.key] = { ...(data.statsMeta[action.key] || {}), label };
+      break;
+    }
+
+    case 'DELETE_STAT': {
+      // удалять можно только созданные пользователем атрибуты (cs_*)
+      if (!action.key.startsWith('cs_')) return state;
+      data = ensureShape(clone(data));
+      const removedXP = data.stats[action.key]?.xp ?? 0;
+      delete data.stats[action.key];
+      delete data.statsMeta[action.key];
+      // общий XP персонажа уменьшается на вклад удалённого атрибута
+      data.profile.totalXP = Math.max(0, data.profile.totalXP - removedXP);
+      data.profile.level = levelFromXP(data.profile.totalXP).level;
+      data.profile.rank = rankForLevel(data.profile.level);
       break;
     }
 
