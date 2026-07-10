@@ -1,10 +1,11 @@
 import { CONFIG } from '../config.js';
 
+// Непрерывный множитель времени: растёт степенно, без «ступенек» —
+// задача на 100 часов ощутимо дороже задачи на 4 часа.
 export function timeMultForMinutes(minutes) {
-  for (const { maxMinutes, mult } of CONFIG.TIME_BRACKETS) {
-    if (minutes <= maxMinutes) return mult;
-  }
-  return 1;
+  const { baseMinutes, exponent, minMult, maxMult } = CONFIG.TIME_MULT;
+  const mult = Math.pow(Math.max(minutes, 1) / baseMinutes, exponent);
+  return Math.min(maxMult, Math.max(minMult, mult));
 }
 
 // §5.1: XP = BASE × mult_difficulty × mult_time.
