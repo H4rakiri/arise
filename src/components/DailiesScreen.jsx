@@ -17,6 +17,7 @@ export default function DailiesScreen() {
   const [stat, setStat] = useState('jp');
   const [difficulty, setDifficulty] = useState('normal');
   const [minutes, setMinutes] = useState(30);
+  const [at, setAt] = useState('');
 
   const doneCount = dailies.filter((d) => d.history[today]).length;
 
@@ -24,8 +25,9 @@ export default function DailiesScreen() {
     e.preventDefault();
     const t = title.trim();
     if (!t) return;
-    dispatch({ type: 'ADD_DAILY', title: t, stat, difficulty, time: minutes });
+    dispatch({ type: 'ADD_DAILY', title: t, stat, difficulty, time: minutes, at: at || null });
     setTitle('');
+    setAt('');
   }
 
   // Последние 7 дней — мини-история выполнения
@@ -68,6 +70,13 @@ export default function DailiesScreen() {
                 <span className="task-title">{d.title}</span>
                 <span className={`tag stat-${d.stat}`}>{META[d.stat]?.label ?? d.stat}</span>
                 <span className="task-xp">+{d.xp} XP</span>
+                <input
+                  className="daily-at"
+                  type="time"
+                  value={d.at || ''}
+                  title="Во сколько бот напомнит об этом дейлике (МСК). Пусто — без напоминания."
+                  onChange={(e) => dispatch({ type: 'SET_DAILY_TIME', id: d.id, at: e.target.value })}
+                />
                 <span className="daily-week">
                   {week.map((day) => (
                     <i key={day} className={`week-dot ${d.history[day] ? 'on' : ''} ${day === today ? 'today' : ''}`} />
@@ -102,6 +111,10 @@ export default function DailiesScreen() {
               ))}
             </select>
             <TimeInput minutes={minutes} onChange={setMinutes} />
+            <label className="daily-at-field" title="Во сколько бот напомнит (МСК). Пусто — без напоминания.">
+              ⏰
+              <input className="daily-at" type="time" value={at} onChange={(e) => setAt(e.target.value)} />
+            </label>
             <span className="xp-preview">+{taskXP(difficulty, minutes)} XP/день</span>
             <button className="btn primary" type="submit" disabled={!title.trim()}>
               Добавить

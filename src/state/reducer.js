@@ -7,6 +7,9 @@ import { rollDrop, diffForXP } from '../lib/loot.js';
 function ensureShape(data) {
   if (!data.inventory) data.inventory = { items: [] };
   if (!data.statsMeta) data.statsMeta = {};
+  for (const d of data.dailies || []) {
+    if (d.at === undefined) d.at = null; // дейлики без привязки ко времени
+  }
   for (const item of data.inventory.items) {
     if (item.type === 'accessory') item.type = 'ring'; // старый тип → слот кольца
     if (!item.kind) item.kind = 'equipment';
@@ -293,8 +296,18 @@ export function reducer(state, action) {
         title: action.title,
         stat: action.stat,
         xp: taskXP(action.difficulty || 'normal', action.time || 'medium'),
+        at: action.at || null, // «HH:MM» — во сколько напоминать (бот), null = без привязки
         history: {},
       });
+      break;
+    }
+
+    // Привязка дейлика ко времени: бот пришлёт напоминание в этот час
+    case 'SET_DAILY_TIME': {
+      data = clone(data);
+      const daily = data.dailies.find((d) => d.id === action.id);
+      if (!daily) return state;
+      daily.at = action.at || null;
       break;
     }
 
