@@ -250,6 +250,20 @@ function SteamTab() {
                   >
                     {ov.completed ? '✓ Пройдена' : 'Пройдена?'}
                   </button>
+                  <ImagePick
+                    className="mini"
+                    label={ov.image ? 'Свой арт ✓' : 'Арт…'}
+                    onImage={(image) => dispatch({ type: 'SET_STEAM_IMAGE', appid: g.appid, image })}
+                  />
+                  {ov.image && (
+                    <button
+                      className="btn mini"
+                      title="Вернуть обложку из Steam"
+                      onClick={() => dispatch({ type: 'SET_STEAM_IMAGE', appid: g.appid, image: null })}
+                    >
+                      ↺ авто
+                    </button>
+                  )}
                   <button
                     className="btn mini"
                     title={ov.hidden ? 'Вернуть в библиотеку' : 'Скрыть игру'}
