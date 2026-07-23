@@ -590,6 +590,44 @@ input[type='checkbox'] { accent-color: var(--accent-2); width: 16px; height: 16p
   gap: 24px;
 }
 
+/* ---------- вкладка Steam ---------- */
+.steam-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.steam-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.steam-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.steam-stat-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+}
+.select.mini { padding: 4px 8px; font-size: 12px; }
+
+/* Непройденные игры приглушены; отметка «пройдена» «зажигает» карту */
+.holo-card.steam-todo { opacity: 0.62; filter: saturate(0.65); transition: opacity 0.2s, filter 0.2s; }
+.holo-card.steam-todo:hover { opacity: 0.9; filter: saturate(0.85); }
+.holo-card.steam-done { box-shadow: 0 0 0 1px var(--border-bright), var(--glow); }
+
 /* ---------- холо-карточка (§8.3, редизайн) ----------
    Слои как на цифровых ТКГ-картах:
    .holo-foil    — радужные полосы фольги, позиция от курсора, color-dodge

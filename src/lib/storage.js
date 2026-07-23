@@ -3,6 +3,7 @@
 const DATA_KEY = 'arise:data';
 const TOKEN_KEY = 'arise:token';
 const SHA_KEY = 'arise:sha';
+const STEAM_KEY = 'arise:steam';
 
 export function loadCachedData() {
   try {
@@ -37,4 +38,22 @@ export function loadSha() {
 export function saveSha(sha) {
   if (sha) localStorage.setItem(SHA_KEY, sha);
   else localStorage.removeItem(SHA_KEY);
+}
+
+// Кеш библиотеки Steam — чтобы карты показывались и оффлайн, без обращения к API
+export function loadCachedSteam() {
+  try {
+    const raw = localStorage.getItem(STEAM_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedSteam(lib) {
+  try {
+    if (lib) localStorage.setItem(STEAM_KEY, JSON.stringify(lib));
+  } catch {
+    /* квота — молча живём на state в памяти */
+  }
 }

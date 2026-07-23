@@ -70,7 +70,7 @@ function StatsEditor() {
 }
 
 export default function SettingsScreen() {
-  const { state, dispatch, token, setToken, syncStatus } = useApp();
+  const { state, dispatch, token, setToken, syncStatus, steamLibrary } = useApp();
   const { settings, profile } = state.data;
   const [repoInput, setRepoInput] = useState(settings.githubRepo);
   const [tokenInput, setTokenInput] = useState(token);
@@ -123,6 +123,24 @@ export default function SettingsScreen() {
             <span className={`sync-badge sync-${syncStatus}`}>{syncStatus}</span>
           </div>
         </form>
+      </Panel>
+
+      <Panel title="STEAM">
+        <p className="dim small">
+          Библиотека и часы подтягиваются автоматически из бот-репозитория (<code>steam.json</code>).
+          Настройка одноразовая — в репозитории добавь секреты <code>STEAM_API_KEY</code> и
+          <code> STEAM_ID</code>, затем запусти <b>Actions → ARISE steam sync</b>. Профиль Steam должен
+          быть публичным. Отметки о прохождении ставятся вручную во вкладке <b>КОЛЛЕКЦИЯ → Steam</b>.
+        </p>
+        <p className="dim small">
+          {steamLibrary
+            ? `Загружено игр: ${steamLibrary.count ?? steamLibrary.games?.length ?? 0}${
+                steamLibrary.updatedAt
+                  ? ` · обновлено ${new Date(steamLibrary.updatedAt).toLocaleString('ru-RU')}`
+                  : ''
+              }`
+            : 'Библиотека ещё не загружена (нет steam.json или профиль приватный).'}
+        </p>
       </Panel>
 
       <Panel title="НЕЙРОСЕТЬ">

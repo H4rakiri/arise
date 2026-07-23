@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { reducer } from './reducer.js';
 import { defaultData } from '../lib/defaultData.js';
-import { loadCachedData, saveCachedData, loadToken, saveToken, loadSha, saveSha } from '../lib/storage.js';
-import { fetchRemoteData, fetchRemoteSha, pushRemoteData } from '../lib/github.js';
+import { loadCachedData, saveCachedData, loadToken, saveToken, loadSha, saveSha, loadCachedSteam, saveCachedSteam } from '../lib/storage.js';
+import { fetchRemoteData, fetchRemoteSha, pushRemoteData, fetchSteamData } from '../lib/github.js';
 import { CONFIG } from '../config.js';
 import { playSound } from '../lib/sound.js';
 
@@ -21,6 +21,9 @@ export function AppProvider({ children }) {
   // idle | syncing | synced | error | local (нет токена/репо)
   const [syncStatus, setSyncStatus] = useState('local');
   const [token, setTokenState] = useState(loadToken);
+  // Библиотека Steam (steam.json из бот-репо) — держим отдельно от data.json,
+  // чтобы не раздувать синхронизируемый файл. Только чтение + локальный кеш.
+  const [steamLibrary, setSteamLibrary] = useState(loadCachedSteam);
   const shaRef = useRef(loadSha());
   const timerRef = useRef(null);
   const pushingRef = useRef(false);
@@ -85,6 +88,16 @@ export function AppProvider({ children }) {
           saveSha(sha);
         }
         setSyncStatus('synced');
+        // Библиотека Steam — best-effort: её отсутствие не должно ломать синк
+        try {
+          const lib = await fetchSteamData(repo, token);
+          if (!cancelled && lib) {
+            setSteamLibrary(lib);
+            saveCachedSteam(lib);
+          }
+        } catch {
+          /* steam.json ещё нет или профиль приватный — просто нет вкладки Steam */
+        }
       } catch (e) {
         if (!cancelled) {
           setSyncStatus('error');
@@ -131,6 +144,6 @@ export function AppProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.dirty]);
 
-  const value = { state, dispatch, syncStatus, token, setToken, canSync };
+  const value = { state, dispatch, syncStatus, token, setToken, canSync, steamLibrary };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

@@ -28,6 +28,9 @@ export function defaultData() {
       games: [],
       cars: [],
     },
+    // Наложение на библиотеку Steam: наши отметки поверх объективных данных из
+    // steam.json. Ключ — appid. { completed, completedAt, image, hidden }.
+    steam: { overlay: {}, stat: '' },
     settings: {
       githubRepo: '',
       llmEnabled: false,

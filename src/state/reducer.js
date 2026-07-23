@@ -7,6 +7,9 @@ import { rollDrop, diffForXP } from '../lib/loot.js';
 function ensureShape(data) {
   if (!data.inventory) data.inventory = { items: [] };
   if (!data.statsMeta) data.statsMeta = {};
+  if (!data.steam) data.steam = { overlay: {}, stat: '' };
+  if (!data.steam.overlay) data.steam.overlay = {};
+  if (data.steam.stat === undefined) data.steam.stat = '';
   for (const d of data.dailies || []) {
     if (d.at === undefined) d.at = null; // дейлики без привязки ко времени
   }
@@ -15,6 +18,15 @@ function ensureShape(data) {
     if (!item.kind) item.kind = 'equipment';
   }
   return data;
+}
+
+// В какой атрибут капает опыт за пройденную игру Steam:
+// явно выбранный → «хобби/игры» по подписи → первый доступный.
+function steamStatKey(data) {
+  const keys = Object.keys(data.stats || {});
+  if (data.steam?.stat && data.stats[data.steam.stat]) return data.steam.stat;
+  const hobby = keys.find((k) => /хобб|hobby|игр|game/i.test(data.statsMeta?.[k]?.label || ''));
+  return hobby || keys[0] || null;
 }
 
 // Кладёт дескриптор дропа в инвентарь и создаёт событие.
@@ -452,6 +464,56 @@ export function reducer(state, action) {
     case 'DELETE_CARD': {
       data = clone(data);
       data.cards[action.collection] = data.cards[action.collection].filter((c) => c.id !== action.id);
+      break;
+    }
+
+    // Отметка «пройдена» у игры Steam: карта получает голо-статус + начисляется опыт.
+    // Снятие галочки откатывает опыт (как повторное снятие дейлика).
+    case 'TOGGLE_STEAM_COMPLETE': {
+      data = ensureShape(clone(data));
+      const { appid, hours = 0 } = action;
+      const ov = data.steam.overlay[appid] || {};
+      const rarity = gameRarity(hours);
+      const xp = CONFIG.STEAM_COMPLETE_XP[rarity] ?? CONFIG.STEAM_COMPLETE_XP.common;
+      const statKey = steamStatKey(data);
+      if (ov.completed) {
+        ov.completed = false;
+        ov.completedAt = null;
+        if (statKey) awardXP(data, statKey, -(ov.xp || xp), events);
+        ov.xp = 0;
+      } else {
+        ov.completed = true;
+        ov.completedAt = new Date().toISOString();
+        ov.xp = xp; // фиксируем начисленное, чтобы корректно откатить при снятии
+        if (statKey) awardXP(data, statKey, xp, events);
+        events.push({ kind: 'card', title: action.name || 'Игра пройдена', rarity: 'holo' });
+      }
+      data.steam.overlay[appid] = ov;
+      break;
+    }
+
+    // Своя обложка поверх авто-арта Steam
+    case 'SET_STEAM_IMAGE': {
+      data = ensureShape(clone(data));
+      const ov = data.steam.overlay[action.appid] || {};
+      ov.image = action.image || null;
+      data.steam.overlay[action.appid] = ov;
+      break;
+    }
+
+    // Спрятать игру из библиотеки (мусор из бандлов)
+    case 'TOGGLE_STEAM_HIDDEN': {
+      data = ensureShape(clone(data));
+      const ov = data.steam.overlay[action.appid] || {};
+      ov.hidden = !ov.hidden;
+      data.steam.overlay[action.appid] = ov;
+      break;
+    }
+
+    // Выбор атрибута, в который капает опыт за пройденные игры
+    case 'SET_STEAM_STAT': {
+      data = ensureShape(clone(data));
+      data.steam.stat = action.key || '';
       break;
     }
 

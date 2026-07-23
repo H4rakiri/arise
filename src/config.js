@@ -43,6 +43,9 @@ export const CONFIG = {
     { max: Infinity, rarity: 'legendary' },
   ],
 
+  // Опыт за пройденную игру из библиотеки Steam (редкость — по часам, gameRarity)
+  STEAM_COMPLETE_XP: { common: 60, rare: 140, epic: 320, legendary: 700 },
+
   // §6.3 — защита серии: запас заморозок с восстановлением раз в месяц
   FREEZES_PER_MONTH: 2,
 

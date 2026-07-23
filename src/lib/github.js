@@ -30,6 +30,19 @@ function decode(b64) {
   return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
+// GET steam.json (библиотека, которую пишет бот-репо). Возвращает объект или null.
+// Через Contents API — тем же токеном, приватный репозиторий читается без публичного raw.
+export async function fetchSteamData(repo, token) {
+  const res = await fetch(`${API}/repos/${repo}/contents/steam.json`, {
+    headers: headers(token),
+    cache: 'no-store',
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitHub GET steam.json ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  return JSON.parse(decode(json.content));
+}
+
 // GET содержимого data.json. Возвращает { data, sha } или null, если файла ещё нет.
 export async function fetchRemoteData(repo, token) {
   const res = await fetch(`${API}/repos/${repo}/contents/${FILE_PATH}`, {
