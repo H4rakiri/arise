@@ -129,12 +129,16 @@ export default function SettingsScreen() {
         <p className="dim small">
           Библиотека и часы подтягиваются автоматически из бот-репозитория (<code>steam.json</code>).
           Настройка одноразовая — в репозитории добавь секреты <code>STEAM_API_KEY</code> и
-          <code> STEAM_ID</code>, затем запусти <b>Actions → ARISE steam sync</b>. Профиль Steam должен
-          быть публичным. Отметки о прохождении ставятся вручную во вкладке <b>КОЛЛЕКЦИЯ → Steam</b>.
+          <code> STEAM_ID</code>, затем запусти <b>Actions → ARISE steam sync</b>. Несколько аккаунтов —
+          перечисли ID через запятую в <code>STEAM_ID</code> или добавь <code>STEAM_ID_2</code> и т.д.;
+          библиотеки объединятся. Каждый профиль должен быть публичным. Отметки о прохождении ставятся
+          вручную во вкладке <b>КОЛЛЕКЦИЯ → Steam</b>.
         </p>
         <p className="dim small">
           {steamLibrary
             ? `Загружено игр: ${steamLibrary.count ?? steamLibrary.games?.length ?? 0}${
+                steamLibrary.accounts?.length ? ` · аккаунтов: ${steamLibrary.accounts.length}` : ''
+              }${
                 steamLibrary.updatedAt
                   ? ` · обновлено ${new Date(steamLibrary.updatedAt).toLocaleString('ru-RU')}`
                   : ''
